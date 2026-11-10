@@ -23,4 +23,24 @@ view,
 text {
   box-sizing: border-box;
 }
+
+/* #ifdef H5 */
+/* 底部导航栏：加大字体与高度（uni 默认 20px 太小，孩子看不清） */
+uni-tabbar {
+  height: 68px !important;
+}
+uni-tabbar .uni-tabbar__item {
+  height: 68px !important;
+  padding-top: 6px !important;
+}
+uni-tabbar .uni-tabbar__label {
+  font-size: 21px !important;
+  font-weight: 600 !important;
+  margin-top: 4px !important;
+  letter-spacing: 1px;
+}
+uni-tabbar .uni-tabbar__bd {
+  height: 68px !important;
+}
+/* #endif */
 </style>

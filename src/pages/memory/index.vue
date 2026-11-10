@@ -41,6 +41,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generateForGame } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult } from '@/common/store'
+import { sfx } from '@/common/sound'
 
 const settings = ref(getSettings())
 const cards = ref([])
@@ -134,6 +135,7 @@ function flip(c) {
   if (locked.value || c.matched || c.open) return
   c.open = true
   buzz(false)
+  sfx('flip')
   if (openCount() < 2) return
 
   // 两张翻开，判定
@@ -144,6 +146,7 @@ function flip(c) {
     a.matched = true
     b.matched = true
     matchedPairs.value++
+    sfx('match')
     const rec = attempt.value[a.qid] || { q: a.q, wrong: 0, firstWrong: '' }
     if (rec.wrong === 0) rightCount.value++
     else {
@@ -165,6 +168,7 @@ function flip(c) {
     }
     attempt.value[exprCard.qid] = rec
     buzz(true)
+    sfx('wrong')
     shakes.value = [a.key, b.key]
     shakeTimer = setTimeout(() => {
       shakes.value = []

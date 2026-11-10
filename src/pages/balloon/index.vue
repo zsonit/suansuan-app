@@ -49,6 +49,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generateForGame, makeChoices } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult } from '@/common/store'
+import { sfx, cheerRight } from '@/common/sound'
 
 const SLOTS = [
   { left: '6%', top: '8%' },
@@ -129,6 +130,8 @@ function tap(i) {
   if (b.correct) {
     b.state = 'popped'
     buzz(false)
+    sfx('pop')
+    if (Math.random() < 0.3) cheerRight()
     if (firstWrong) {
       wrongList.value.push({ text: current.value.text, answer: current.value.answer, your: firstWrong })
       addWrong({ text: current.value.text, answer: current.value.answer, mode: current.value.mode })
@@ -141,6 +144,7 @@ function tap(i) {
     b.state = 'wrong'
     if (!firstWrong) firstWrong = b.label
     buzz(true)
+    sfx('wrong')
   }
 }
 

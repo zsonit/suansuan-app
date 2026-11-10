@@ -51,6 +51,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generateForGame } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult } from '@/common/store'
+import { sfx, speak, CHEERS_STREAK } from '@/common/sound'
 
 const settings = ref(getSettings())
 const questions = ref([])
@@ -169,6 +170,8 @@ function tryMatch() {
     R.matched = true
     matchedPairs.value++
     buzz(false)
+    sfx('match')
+    if (matchedPairs.value % 3 === 0) speak(CHEERS_STREAK[Math.floor(Math.random() * CHEERS_STREAK.length)])
     if (rec.wrong === 0) rightCount.value++
     else {
       wrongList.value.push({ text: L.q.text, answer: L.q.answer, your: rec.firstWrong || '' })
@@ -189,6 +192,7 @@ function tryMatch() {
     rec.wrong++
     if (!rec.firstWrong) rec.firstWrong = R.label
     buzz(true)
+    sfx('wrong')
     shakeL.value = L.key
     shakeR.value = R.key
     selLeft.value = null

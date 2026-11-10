@@ -25,6 +25,20 @@
     <view class="group">
       <view class="row">
         <view class="row-main">
+          <text class="row-title">音效</text>
+          <text class="row-desc">答对、答错、游戏里的提示音</text>
+        </view>
+        <switch :checked="settings.sound" color="#FF7A3D" @change="onSound" />
+      </view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">语音鼓励</text>
+          <text class="row-desc">连对时夸一夸，结算时来一句加油</text>
+        </view>
+        <switch :checked="settings.voice" color="#FF7A3D" @change="onVoice" />
+      </view>
+      <view class="row">
+        <view class="row-main">
           <text class="row-title">答对后自动下一题</text>
           <text class="row-desc">关闭后需要手动点「继续」</text>
         </view>
@@ -64,6 +78,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getSettings, saveSettings, clearAll } from '@/common/store'
+import { sfx, speak } from '@/common/sound'
 
 const goals = [10, 20, 30, 50]
 const settings = ref(getSettings())
@@ -79,6 +94,14 @@ function setGoal(g) {
 
 function onAutoNext(e) {
   settings.value = saveSettings({ autoNext: e.detail.value })
+}
+function onSound(e) {
+  settings.value = saveSettings({ sound: e.detail.value })
+  if (e.detail.value) sfx('right') // 打开时给一声试听
+}
+function onVoice(e) {
+  settings.value = saveSettings({ voice: e.detail.value })
+  if (e.detail.value) speak('语音鼓励已开启')
 }
 function onHaptic(e) {
   settings.value = saveSettings({ haptic: e.detail.value })

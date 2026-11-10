@@ -67,6 +67,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generateForGame, makeChoices } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult } from '@/common/store'
+import { sfx, cheerRight } from '@/common/sound'
 
 const settings = ref(getSettings())
 const list = ref([])
@@ -155,6 +156,8 @@ function tap(w) {
   if (w === String(q.answer)) {
     feedback.value = 'right'
     buzz(false)
+    sfx('match')
+    if (Math.random() < 0.3) cheerRight()
     if (firstWrong) {
       wrongList.value.push({ text: q.text, answer: q.answer, your: firstWrong })
       addWrong({ text: q.text, answer: q.answer, mode: q.mode })
@@ -166,6 +169,7 @@ function tap(w) {
     feedback.value = 'wrong'
     if (!firstWrong) firstWrong = w
     buzz(true)
+    sfx('wrong')
     jump = setTimeout(() => {
       feedback.value = ''
       chosen.value = ''

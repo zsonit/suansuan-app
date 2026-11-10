@@ -54,6 +54,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generateForGame, makeChoices } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult } from '@/common/store'
+import { sfx } from '@/common/sound'
 
 const TICK = 100
 const START_MS = 600 // 60 秒（0.1s 单位）
@@ -147,6 +148,7 @@ function tap(o) {
     timeLeft.value = Math.min(START_MS, timeLeft.value + 10) // 答对 +1 秒
     feedback.value = 'right'
     buzz(false)
+    if (combo.value >= 2) { sfx('combo', combo.value) } else { sfx('right') }
     jump = setTimeout(next, combo.value >= 5 ? 180 : 320)
   } else {
     wrongCount.value++
@@ -156,6 +158,7 @@ function tap(o) {
     addWrong({ text: q.text, answer: q.answer, mode: q.mode })
     feedback.value = 'wrong'
     buzz(true)
+    sfx('wrong')
     jump = setTimeout(next, 1100)
   }
 }

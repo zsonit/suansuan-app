@@ -99,6 +99,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
+import { sfx, speak, cheerRight, CHEERS_STREAK } from '@/common/sound'
 
 const baseKeys = [
   { val: '1', label: '1', type: 'num' },
@@ -247,11 +248,20 @@ function settle(my) {
     rightCount.value++
     feedback.value = 'right'
     buzz(false)
+    sfx('right')
+    // 连对 5 题喊一次鼓励
+    if (rightCount.value > 0 && rightCount.value % 5 === 0 && wrongList.value.length === 0) {
+      sfx('combo', rightCount.value / 5)
+      speak(CHEERS_STREAK[Math.floor(Math.random() * CHEERS_STREAK.length)])
+    } else if (Math.random() < 0.25) {
+      cheerRight()
+    }
   } else {
     wrongList.value.push({ text: q.text, answer: q.answer, your: my })
     addWrong({ text: q.text, answer: q.answer, mode: q.mode || cfg.value.mode, options: q.options })
     feedback.value = 'wrong'
     buzz(true)
+    sfx('wrong')
   }
 
   // 自动跳题：开启时按答题速度给不同停顿；关闭时等孩子自己点「继续」

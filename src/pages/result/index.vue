@@ -55,6 +55,7 @@ import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { takeResult, getSettings } from '@/common/store'
 import { fmtDuration, exprText } from '@/common/questions'
+import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
 
 const settings = ref(getSettings())
 const res = ref({ total: 0, right: 0, durationMs: 0, wrong: [], mode: 'add', difficulty: 1, count: 10 })
@@ -87,6 +88,14 @@ onLoad(() => {
   settings.value = getSettings()
   const r = takeResult()
   if (r) res.value = Object.assign(res.value, r)
+  // 结算音效 + 语音鼓励
+  if (acc.value >= 90) {
+    sfx('win')
+    speak(CHEERS_END_GOOD[Math.floor(Math.random() * CHEERS_END_GOOD.length)])
+  } else {
+    sfx('soft')
+    speak(CHEERS_END[Math.floor(Math.random() * CHEERS_END.length)])
+  }
 })
 
 function again() {

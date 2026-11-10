@@ -11,7 +11,9 @@ const DEFAULT_SETTINGS = {
   dailyGoal: 20, // 每日目标题数
   autoNext: true, // 答对后自动跳下一题
   haptic: true, // 答错震动反馈
-  eyeCare: false // 护眼模式（米黄背景）
+  eyeCare: false, // 护眼模式（米黄背景）
+  sound: true, // 音效（答对/答错/游戏音）
+  voice: true // 语音鼓励（TTS）
 }
 
 function read(key, fallback) {
