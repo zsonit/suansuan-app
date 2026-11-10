@@ -1,0 +1,116 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "算算星球"
+      }
+    },
+    {
+      "path": "pages/wrong/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "错题本"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/practice/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "练习中",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/result/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "练习结果",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "设置"
+      }
+    },
+    {
+      "path": "pages/balloon/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "气球抢答",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/match/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "数字对对碰",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/racer/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "限时挑战",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/balance/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "天平砝码",
+        "disableScroll": true
+      }
+    },
+    {
+      "path": "pages/memory/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "翻牌记忆",
+        "disableScroll": true
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "算算星球",
+    "navigationBarBackgroundColor": "#FFF9F0",
+    "backgroundColor": "#FFF9F0",
+    "backgroundColorTop": "#FFF9F0",
+    "backgroundColorBottom": "#FFF9F0"
+  },
+  "tabBar": {
+    "color": "#A79C92",
+    "selectedColor": "#FF7A3D",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "练习"
+      },
+      {
+        "pagePath": "pages/wrong/index",
+        "text": "错题本"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的"
+      }
+    ]
+  }
+}
