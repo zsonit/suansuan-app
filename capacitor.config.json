@@ -1,0 +1,8 @@
+{
+  "appId": "cn.zsonit.suansuan",
+  "appName": "算算星球",
+  "webDir": "dist/build/h5",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "always" },
+  "server": { "androidScheme": "https" }
+}

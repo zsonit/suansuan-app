@@ -22,3 +22,14 @@ dist
 # uni-app
 unpackage/
 .hbuilderx/
+
+# Capacitor native build/sync outputs (CI re-syncs)
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/app/src/main/assets/public/
+ios/build/
+ios/App/Pods/
+ios/App/App/public/
+ios/DerivedData/
