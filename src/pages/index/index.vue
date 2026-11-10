@@ -51,12 +51,14 @@
             :class="{ active: mode === m.key }"
             @click="selectMode(m)"
           >
-            <text class="mode-emoji">{{ m.emoji }}</text>
+            <view class="mode-pic">
+              <image class="mode-img" :src="g.img" mode="aspectFill" />
+              <text class="tick" v-if="mode === m.key">✓</text>
+            </view>
             <view class="mode-info">
               <text class="mode-name">{{ m.name }}</text>
               <text class="mode-desc">{{ m.desc }}</text>
             </view>
-            <text class="tick" v-if="mode === m.key">✓</text>
           </view>
         </view>
       </template>
@@ -331,10 +333,10 @@ function startGrade() {
   background: #fff;
   border: 3rpx solid #fff;
   border-radius: 32rpx;
-  padding: 24rpx 22rpx;
-  margin-bottom: 20rpx;
+  padding: 14rpx 14rpx 20rpx;
+  margin-bottom: 22rpx;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   box-shadow: 0 8rpx 24rpx rgba(180, 150, 120, 0.1);
 }
 .mode.active {
@@ -342,16 +344,40 @@ function startGrade() {
   background: #fff6ee;
   box-shadow: 0 12rpx 28rpx rgba(255, 122, 61, 0.18);
 }
-.mode-emoji {
-  font-size: 38rpx;
-  margin-right: 14rpx;
+.mode-pic {
+  position: relative;
+  height: 180rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  background: #fff3e6;
+}
+.mode-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.mode-pic .tick {
+  position: absolute;
+  right: 12rpx;
+  top: 10rpx;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: #ff7a3d;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+  box-shadow: 0 4rpx 12rpx rgba(255, 122, 61, 0.4);
 }
 .mode-info {
   display: flex;
   flex-direction: column;
+  padding: 14rpx 10rpx 0;
 }
 .mode-name {
-  font-size: 29rpx;
+  font-size: 30rpx;
   font-weight: 700;
   color: #332c26;
 }
@@ -359,14 +385,6 @@ function startGrade() {
   font-size: 20rpx;
   color: #a79c92;
   margin-top: 6rpx;
-}
-.tick {
-  position: absolute;
-  right: 16rpx;
-  top: 12rpx;
-  font-size: 22rpx;
-  color: #ff7a3d;
-  font-weight: 700;
 }
 
 .grade-pills {

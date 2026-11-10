@@ -17,6 +17,7 @@ export const GROUPS = [
   {
     key: 'basic',
     name: '基础计算',
+    img: '/static/icons/basic.png',
     emoji: '📝',
     modes: [
       { key: 'add', name: '加法', emoji: '➕', desc: '两数相加', levels: [1, 2, 3, 4] },
@@ -30,6 +31,7 @@ export const GROUPS = [
   {
     key: 'skill',
     name: '专项技巧',
+    img: '/static/icons/skill.png',
     emoji: '🎯',
     modes: [
       { key: 'tens', name: '凑十法', emoji: '🔟', desc: '9加几、8加几…进位加', levels: [2] },
@@ -44,6 +46,7 @@ export const GROUPS = [
   {
     key: 'cmp',
     name: '比一比',
+    img: '/static/icons/cmp.png',
     emoji: '🔍',
     modes: [
       { key: 'cmpnum', name: '数字比大小', emoji: '🆚', desc: '填 > < 或 =', levels: [1, 2, 3, 4] },
@@ -53,6 +56,7 @@ export const GROUPS = [
   {
     key: 'blank',
     name: '填空挑战',
+    img: '/static/icons/blank.png',
     emoji: '✏️',
     modes: [
       { key: 'missadd', name: '缺加数', emoji: '❓', desc: '3 + ? = 7', levels: [1, 2, 3, 4] },
@@ -63,6 +67,7 @@ export const GROUPS = [
   {
     key: 'judge',
     name: '对错判断',
+    img: '/static/icons/judge.png',
     emoji: '⚖️',
     modes: [
       { key: 'judge', name: '对错小法官', emoji: '👀', desc: '判断算式对不对', levels: [1, 2, 3, 4] }
@@ -71,6 +76,7 @@ export const GROUPS = [
   {
     key: 'adv',
     name: '小数分数',
+    img: '/static/icons/adv.png',
     emoji: '🧾',
     modes: [
       { key: 'dec', name: '小数加减', emoji: '🔸', desc: '一位/两位小数', levels: [1, 2, 3] },
@@ -80,6 +86,7 @@ export const GROUPS = [
   {
     key: 'cn',
     name: '语文',
+    img: '/static/icons/cn.png',
     emoji: '📖',
     modes: [
       { key: 'cn_opp', name: '反义词', emoji: '↔️', desc: '找意思相反的词', levels: [1], grades: [1, 2], lang: true },
@@ -93,6 +100,7 @@ export const GROUPS = [
   {
     key: 'en',
     name: '英语',
+    img: '/static/icons/en.png',
     emoji: '🔤',
     modes: [
       { key: 'en_letter', name: '字母练习', emoji: '🅰️', desc: '大小写与字母顺序', levels: [1], grades: [3], lang: true },
@@ -105,6 +113,7 @@ export const GROUPS = [
   {
     key: 'game',
     name: '趣味游戏',
+    img: '/static/icons/game.png',
     emoji: '🎮',
     modes: [
       { key: 'balloon', name: '气球抢答', emoji: '🎈', desc: '点爆正确答案气球', levels: [1, 2, 3, 4] },
