@@ -98,6 +98,7 @@
 import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generate, generateForGrade, fromWrong } from '@/common/questions'
+import { lemiaoGenerate } from '@/common/lemiao'
 import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
 import { sfx, speak, cheerRight, CHEERS_STREAK } from '@/common/sound'
 
@@ -120,7 +121,7 @@ const keys = computed(() => {
   if (qType.value === 'frac') {
     return [...baseKeys.slice(0, 9), { val: '/', label: '/', type: 'fn' }, ...baseKeys.slice(9)]
   }
-  if (cfg.value.mode === 'dec') {
+  if (cfg.value.mode === 'dec' || current.value.dot) {
     return [...baseKeys.slice(0, 9), { val: '.', label: '.', type: 'fn' }, ...baseKeys.slice(9)]
   }
   return baseKeys
@@ -134,7 +135,7 @@ const rightCount = ref(0)
 const wrongList = ref([])
 const feedback = ref('') // '' | 'right' | 'wrong'
 const elapsed = ref(0)
-const cfg = ref({ mode: 'add', difficulty: 1, count: 10, source: '' })
+const cfg = ref({ mode: 'add', difficulty: 1, count: 10, source: '', key: '' })
 
 let tick = null
 let jump = null
@@ -155,11 +156,14 @@ onLoad((q) => {
     difficulty: Number(q.difficulty || 1),
     count: Number(q.count || 10),
     source: q.source || '',
+    key: q.key || '',
     grade: Number(q.grade || 0)
   }
 
   if (cfg.value.source === 'wrong') {
     list.value = fromWrong(getWrong())
+  } else if (cfg.value.source === 'lemiao' && cfg.value.key) {
+    list.value = lemiaoGenerate(cfg.value.key, cfg.value.count)
   } else if (cfg.value.source === 'grade' && cfg.value.grade) {
     list.value = generateForGrade(cfg.value.grade, cfg.value.count)
   } else {
@@ -257,8 +261,8 @@ function settle(my) {
       cheerRight()
     }
   } else {
-    wrongList.value.push({ text: q.text, answer: q.answer, your: my })
-    addWrong({ text: q.text, answer: q.answer, mode: q.mode || cfg.value.mode, options: q.options })
+    wrongList.value.push({ text: q.text, answer: q.answer, your: my, type: q.type, options: q.options })
+    addWrong({ text: q.text, answer: q.answer, mode: q.mode || cfg.value.mode, options: q.options, type: q.type })
     feedback.value = 'wrong'
     buzz(true)
     sfx('wrong')
@@ -283,7 +287,7 @@ function finish() {
   tick = null
 
   const rec = {
-    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.mode,
+    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
     total: total.value,
     right: rightCount.value,
     durationMs: elapsed.value * 1000,

@@ -116,6 +116,12 @@ function again() {
     })
     return
   }
+  if (String(r.mode).startsWith('L_')) {
+    uni.redirectTo({
+      url: `/pages/practice/index?source=lemiao&key=${String(r.mode).slice(2)}&count=${r.count || 10}`
+    })
+    return
+  }
   uni.redirectTo({
     url: `/pages/practice/index?mode=${r.mode}&difficulty=${r.difficulty || 1}&count=${r.count || 10}`
   })

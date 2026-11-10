@@ -2,6 +2,7 @@
 // 题型交互分四类：input 数字键盘 / compare 选 > < = / judge 判断对错 / choice 四选一
 
 import * as lang from './langdata.js'
+import { lemiaoAct, lemiaoName } from './lemiao.js'
 
 export const LEVELS = [
   { key: 1, name: '10以内', max: 10, mulMax: 5 },
@@ -199,6 +200,10 @@ export const GRADES = [
 // 按模式还原交互类型
 export function typeOfMode(mode) {
   const m = String(mode || '')
+  if (m.startsWith('L_')) {
+    const a = lemiaoAct(m.slice(2))
+    return (a && a.t) || 'input'
+  }
   if (m.startsWith('cn_') || m.startsWith('en_')) return 'choice'
   if (m.startsWith('cmp')) return 'compare'
   if (m === 'judge') return 'judge'
@@ -645,7 +650,7 @@ export function generate(mode, difficulty, count) {
   return list
 }
 
-// 用错题本生成练习队列（按 mode key 还原交互类型）
+// 用错题本生成练习队列（优先用错题自带的交互类型，其次按 mode 还原）
 export function fromWrong(items) {
   return items.map((w, i) => {
     const mode = w.mode || 'mix'
@@ -653,7 +658,7 @@ export function fromWrong(items) {
       id: i + 1,
       text: w.text,
       answer: w.answer,
-      type: typeOfMode(mode),
+      type: w.type || typeOfMode(mode),
       mode,
       options: w.options
     }
@@ -661,6 +666,7 @@ export function fromWrong(items) {
 }
 
 export function modeName(key) {
+  if (String(key).startsWith('L_')) return lemiaoName(String(key).slice(2))
   if (key === 'grade') return '年级综合'
   if (String(key).startsWith('grade')) {
     const g = GRADES.find((x) => x.key === Number(String(key).slice(5)))

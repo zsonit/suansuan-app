@@ -121,6 +121,7 @@ export function addWrong(q) {
     text: q.text,
     answer: q.answer,
     mode: q.mode || '',
+    type: q.type || (cur && cur.type) || undefined,
     options: q.options || (cur && cur.options) || undefined,
     count: (cur ? cur.count : 0) + 1,
     lastTs: Date.now()

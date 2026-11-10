@@ -63,6 +63,30 @@
         </view>
       </template>
 
+      <template v-for="g in lemiaoView" :key="g.key">
+        <view class="sec-title">
+          <text class="sec-emoji">{{ g.icon }}</text>
+          {{ g.name }}
+        </view>
+        <text class="sec-desc">{{ g.desc }}</text>
+        <view class="lmodes">
+          <view
+            v-for="a in g.acts"
+            :key="a.key"
+            class="lmode"
+            @click="startLemiao(a)"
+          >
+            <view class="lmode-icon">
+              <text class="lmode-emoji">{{ a.icon }}</text>
+            </view>
+            <view class="lmode-info">
+              <text class="lmode-name">{{ a.name }}</text>
+              <text class="lmode-desc">{{ a.desc }}</text>
+            </view>
+          </view>
+        </view>
+      </template>
+
       <template v-if="!isLang">
         <view class="sec-title">难度</view>
         <view class="pills">
@@ -106,6 +130,8 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { GROUPS, GRADES, LEVELS, COUNTS, modeName, modeOf } from '@/common/questions'
+import { LEMIAO_GROUPS } from '@/common/lemiao'
+import { sfx } from '@/common/sound'
 import { getSettings, getToday, getStreak } from '@/common/store'
 
 const gradeSel = ref(1)
@@ -143,6 +169,33 @@ const isLang = computed(() => {
   const m = modeOf(mode.value)
   return !!(m && m.lang)
 })
+
+// 乐喵题卡：7 大分组 105 张，按年级过滤（0=全部）
+const LEMIAO_ICONS = {
+  'number-sense': '🌈',
+  'number-composition': '🧩',
+  'basic-calculation': '📝',
+  'advanced-calculation': '🚀',
+  'patterns-reasoning': '🔮',
+  'geometry-figures': '🔺',
+  'measurement-life': '📏'
+}
+const lemiaoView = computed(() => {
+  const grade = gradeSel.value
+  const out = []
+  for (const g of LEMIAO_GROUPS) {
+    const acts = grade ? g.acts.filter((a) => a.grades.includes(grade)) : g.acts
+    if (acts.length) out.push({ key: g.key, name: g.name, desc: g.desc, icon: LEMIAO_ICONS[g.key] || '⭐', acts })
+  }
+  return out
+})
+
+function startLemiao(a) {
+  uni.navigateTo({
+    url: `/pages/practice/index?source=lemiao&key=${a.key}&count=${count.value}`
+  })
+  sfx('start')
+}
 
 const availLevels = computed(() => {
   const m = modeOf(mode.value)
@@ -319,6 +372,73 @@ function startGrade() {
 .sec-emoji {
   margin-right: 10rpx;
   font-size: 32rpx;
+}
+.sec-desc {
+  display: block;
+  margin: -8rpx 0 20rpx;
+  font-size: 22rpx;
+  color: #b3a897;
+  line-height: 1.5;
+}
+
+/* 乐喵题卡：左侧彩色图标 + 标题 + 副标题 */
+.lmodes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.lmode {
+  width: 48%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 3rpx solid #fff;
+  border-radius: 28rpx;
+  padding: 20rpx 18rpx;
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 8rpx 24rpx rgba(180, 150, 120, 0.1);
+}
+.lmode:active {
+  transform: scale(0.97);
+  background: #fff6ee;
+}
+.lmode-icon {
+  width: 76rpx;
+  height: 76rpx;
+  flex-shrink: 0;
+  border-radius: 22rpx;
+  background: linear-gradient(135deg, #fff1e0, #ffe3c8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+}
+.lmode-emoji {
+  font-size: 40rpx;
+  line-height: 1;
+}
+.lmode-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lmode-name {
+  font-size: 27rpx;
+  font-weight: 700;
+  color: #332c26;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lmode-desc {
+  font-size: 20rpx;
+  color: #a79c92;
+  margin-top: 6rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .modes {
