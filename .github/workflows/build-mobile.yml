@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
       - name: Install deps & build H5
         run: |
           npm ci
@@ -48,8 +48,9 @@ jobs:
           H5_BASE=./ npm run build:h5
       - name: Sync web assets to iOS
         run: npx cap sync ios
-      - name: Install CocoaPods deps
-        run: pod install --project-directory=ios/App
+      - name: Resolve SPM packages
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -resolvePackageDependencies
       - name: Build unsigned .app
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
