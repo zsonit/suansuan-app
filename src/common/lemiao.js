@@ -190,8 +190,8 @@ export const LEMIAO_GROUPS = [
     desc: '练习数的组成、拆分、补全和凑十等基础关系',
     acts: [
       { key: 'k-dice-add', name: '数的组成', icon: '🎲', desc: '两个点数合成一个数', grades: [1], gen: () => { const a = ri(2, 6); const b = ri(2, 6); return q(`两个骰子合起来是几？`, a + b, { visual: { kind: 'dice', a, b } }) } },
-      { key: 'number-bond-missing-part', name: '数的组成', icon: '❓', desc: '缺的那部分是几', grades: [1], gen: () => { const s = ri(5, 10); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a, { visual: { kind: 'dots', icon: pick(['🍎', '⭐', '🧸']), n: s } }) } },
-      { key: 'number-split-drag', name: '认识拆分', icon: '✂️', desc: '把数拆成两部分', grades: [1], gen: () => { const s = ri(6, 10); const a = ri(1, s - 1); return q(`${s} 可以拆成 ${a} 和 ？`, s - a, { visual: { kind: 'dots', icon: pick(['🍬', '🎈', '🍓']), n: s } }) } },
+      { key: 'number-bond-missing-part', name: '数的组成', icon: '❓', desc: '缺的那部分是几', grades: [1], gen: () => { const s = ri(5, 10); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a, { visual: { kind: 'dots', icon: pick(['🍎', '⭐', '🧸']), n: s, group: a } }) } },
+      { key: 'number-split-drag', name: '认识拆分', icon: '✂️', desc: '把数拆成两部分', grades: [1], gen: () => { const s = ri(6, 10); const a = ri(1, s - 1); return q(`${s} 可以拆成 ${a} 和 ？`, s - a, { visual: { kind: 'bond', total: s, part: a, icon: pick(['🍎', '🍬', '⭐']), n: s } }) } },
       { key: 'combine-ten', name: '卡片凑数', icon: '🃏', desc: '两张卡片凑成十', grades: [1], gen: () => { const a = ri(3, 9); return q(`凑成 10：${a} + ？`, 10 - a, { type: 'choice', options: numOptions(10 - a, [1, 2, -1]) }) } },
       { key: 'ten-frame-builder', name: '十格框摆宝石', icon: '💎', desc: '再摆几颗刚好满十', grades: [1], gen: () => { const a = ri(3, 9); return q(`十格框里再摆几颗刚好满十？`, 10 - a, { visual: { kind: 'tenframe', filled: a, icon: '💎' } }) } },
       { key: 'make-ten-bridge-drag', name: '凑十法', icon: '🌉', desc: '拆小数、先凑十', grades: [1, 2], gen: () => { const a = ri(6, 9); const b = ri(11 - a, 9); return q(`${a} + ${b}：把 ${b} 拆成 ${10 - a} 和 ？，先凑十`, b - (10 - a)) } },

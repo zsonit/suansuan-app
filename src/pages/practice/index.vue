@@ -40,8 +40,35 @@
               </view>
             </view>
           </view>
-          <view class="dots" v-if="current.visual.kind === 'dots'">
+          <view class="bond" v-if="current.visual.kind === 'bond'">
+            <text class="bond-top">{{ current.visual.total }}</text>
+            <view class="bond-fork">
+              <view class="bond-line l"></view>
+              <view class="bond-line r"></view>
+            </view>
+            <view class="bond-nums">
+              <text class="bond-num">{{ current.visual.part }}</text>
+              <text class="bond-num q">?</text>
+            </view>
+            <view class="dots-group" v-if="current.visual.icon" style="margin-top: 18rpx">
+              <view class="dotbox">
+                <text class="dot" v-for="i in current.visual.part" :key="'g' + i">{{ current.visual.icon }}</text>
+              </view>
+              <view class="dotbox">
+                <text class="dot" v-for="i in current.visual.total - current.visual.part" :key="'h' + i">{{ current.visual.icon }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="dots" v-if="current.visual.kind === 'dots' && !current.visual.group">
             <text class="dot" v-for="i in current.visual.n" :key="i">{{ current.visual.icon }}</text>
+          </view>
+          <view class="dots-group" v-if="current.visual.kind === 'dots' && current.visual.group">
+            <view class="dotbox">
+              <text class="dot" v-for="i in current.visual.group" :key="'g' + i">{{ current.visual.icon }}</text>
+            </view>
+            <view class="dotbox">
+              <text class="dot" v-for="i in current.visual.n - current.visual.group" :key="'h' + i">{{ current.visual.icon }}</text>
+            </view>
           </view>
         </view>
 
@@ -49,7 +76,7 @@
           class="expr"
           :class="{ small: String(current.text).length > 9 }"
           v-if="qType === 'input' || qType === 'frac'"
-        >{{ current.text }} =</text>
+        >{{ exprShow }}</text>
         <text
           class="expr"
           :class="{ small: String(current.text).length > 9 }"
@@ -220,7 +247,16 @@ let jump = null
 const total = computed(() => list.value.length)
 const current = computed(() => list.value[idx.value] || { text: '', answer: 0 })
 const qType = computed(() => current.value.type || 'input')
-const progressPct = computed(() => (total.value ? (idx.value / total.value) * 100 : 0))
+// 题干已带 = / ○ 的不再追加等号（修复「2 + ? = 9 =」双等号）
+const exprShow = computed(() => {
+  const t = String(current.value.text || '')
+  return /[=○]/.test(t) ? t : t + ' ='
+})
+const progressPct = computed(() => {
+  if (!total.value) return 0
+  const done = idx.value + (feedback.value ? 1 : 0)
+  return (done / total.value) * 100
+})
 const fbClass = computed(() => (feedback.value ? 'fb-' + feedback.value : ''))
 const timeText = computed(() => {
   const s = elapsed.value
@@ -462,7 +498,11 @@ function quit() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8rpx 36rpx;
+  padding: calc(8rpx + env(safe-area-inset-top)) 36rpx 8rpx;
+  position: sticky;
+  top: 0;
+  z-index: 9;
+  background: inherit;
 }
 .close {
   width: 64rpx;
@@ -499,6 +539,9 @@ function quit() {
   background: #f2e7db;
   border-radius: 100rpx;
   overflow: hidden;
+  position: sticky;
+  top: calc(88rpx + env(safe-area-inset-top));
+  z-index: 9;
 }
 .progress-fill {
   height: 100%;
@@ -742,6 +785,77 @@ function quit() {
 .dot {
   font-size: 48rpx;
   line-height: 1.15;
+}
+/* 分组物件图：两组框分开 */
+.dots-group {
+  display: flex;
+  gap: 26rpx;
+  align-items: center;
+}
+.dotbox {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8rpx;
+  max-width: 300rpx;
+  background: #fff8ef;
+  border: 3rpx dashed #e8c28a;
+  border-radius: 18rpx;
+  padding: 14rpx 18rpx;
+}
+/* 分合式：7 劈叉分开 */
+.bond {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bond-top {
+  font-size: 64rpx;
+  font-weight: 900;
+  color: #e86a10;
+  background: #fff;
+  border: 3rpx solid #ffd9ae;
+  border-radius: 20rpx;
+  padding: 6rpx 30rpx;
+  line-height: 1.3;
+}
+.bond-fork {
+  display: flex;
+  justify-content: center;
+  width: 220rpx;
+  height: 64rpx;
+}
+.bond-line {
+  width: 110rpx;
+  height: 5rpx;
+  background: #d8a06a;
+  margin-top: 30rpx;
+}
+.bond-line.l {
+  transform: rotate(28deg);
+  transform-origin: right center;
+}
+.bond-line.r {
+  transform: rotate(-28deg);
+  transform-origin: left center;
+}
+.bond-nums {
+  display: flex;
+  gap: 150rpx;
+  margin-top: -6rpx;
+}
+.bond-num {
+  min-width: 80rpx;
+  font-size: 52rpx;
+  font-weight: 900;
+  color: #332c26;
+  text-align: center;
+  background: #f8f5f0;
+  border-radius: 16rpx;
+  padding: 4rpx 18rpx;
+}
+.bond-num.q {
+  color: #ff9a4d;
 }
 
 /* —— 配对玩法 —— */
