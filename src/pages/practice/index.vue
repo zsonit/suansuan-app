@@ -50,14 +50,6 @@
               <text class="bond-num">{{ current.visual.part }}</text>
               <text class="bond-num q">?</text>
             </view>
-            <view class="dots-group" v-if="current.visual.icon" style="margin-top: 18rpx">
-              <view class="dotbox">
-                <text class="dot" v-for="i in current.visual.part" :key="'g' + i">{{ current.visual.icon }}</text>
-              </view>
-              <view class="dotbox">
-                <text class="dot" v-for="i in current.visual.total - current.visual.part" :key="'h' + i">{{ current.visual.icon }}</text>
-              </view>
-            </view>
           </view>
           <view class="dots" v-if="current.visual.kind === 'dots' && !current.visual.group">
             <text class="dot" v-for="i in current.visual.n" :key="i">{{ current.visual.icon }}</text>
@@ -832,17 +824,17 @@ function quit() {
   margin-top: 30rpx;
 }
 .bond-line.l {
-  transform: rotate(28deg);
+  transform: rotate(-28deg);
   transform-origin: right center;
 }
 .bond-line.r {
-  transform: rotate(-28deg);
+  transform: rotate(28deg);
   transform-origin: left center;
 }
 .bond-nums {
   display: flex;
-  gap: 150rpx;
-  margin-top: -6rpx;
+  gap: 180rpx;
+  margin-top: 4rpx;
 }
 .bond-num {
   min-width: 80rpx;
