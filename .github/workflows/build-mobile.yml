@@ -22,6 +22,12 @@ jobs:
         run: |
           npm ci
           H5_BASE=./ npm run build:h5
+      - name: Bump version (auto per build)
+        run: |
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i "s/versionCode .*/versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
+          sed -i "s/versionName .*/versionName \"${VER}\"/" android/app/build.gradle
+          echo "Android version: ${GITHUB_RUN_NUMBER} (${VER})"
       - name: Sync web assets to Android
         run: npx cap sync android
       - name: Build debug APK
@@ -46,6 +52,12 @@ jobs:
         run: |
           npm ci
           H5_BASE=./ npm run build:h5
+      - name: Bump version (auto per build)
+        run: |
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = ${GITHUB_RUN_NUMBER};/g" ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = ${VER};/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "iOS version: ${GITHUB_RUN_NUMBER} (${VER})"
       - name: Sync web assets to iOS
         run: npx cap sync ios
       - name: Resolve SPM packages
