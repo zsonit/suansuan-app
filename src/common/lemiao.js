@@ -190,11 +190,11 @@ export const LEMIAO_GROUPS = [
     desc: '练习数的组成、拆分、补全和凑十等基础关系',
     acts: [
       { key: 'k-dice-add', name: '数的组成', icon: '🎲', desc: '两个点数合成一个数', grades: [1], gen: () => { const a = ri(2, 6); const b = ri(2, 6); return q(`两个骰子合起来是几？`, a + b, { visual: { kind: 'dice', a, b } }) } },
-      { key: 'number-bond-missing-part', name: '数的组成', icon: '❓', desc: '缺的那部分是几', grades: [1], gen: () => { const s = ri(5, 10); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a, { visual: { kind: 'dots', icon: pick(['🍎', '⭐', '🧸']), n: s, group: a } }) } },
+      { key: 'number-bond-missing-part', name: '数的组成', icon: '❓', desc: '缺的那部分是几', grades: [1], gen: () => { const s = ri(5, 10); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a) } },
       { key: 'number-split-drag', name: '认识拆分', icon: '✂️', desc: '把数拆成两部分', grades: [1], gen: () => { const s = ri(6, 10); const a = ri(1, s - 1); return q(`${s} 可以拆成 ${a} 和 ？`, s - a, { visual: { kind: 'bond', total: s, part: a } }) } },
       { key: 'combine-ten', name: '卡片凑数', icon: '🃏', desc: '两张卡片凑成十', grades: [1], gen: () => { const a = ri(3, 9); return q(`凑成 10：${a} + ？`, 10 - a, { type: 'choice', options: numOptions(10 - a, [1, 2, -1]) }) } },
       { key: 'ten-frame-builder', name: '十格框摆宝石', icon: '💎', desc: '再摆几颗刚好满十', grades: [1], gen: () => { const a = ri(3, 9); return q(`十格框里再摆几颗刚好满十？`, 10 - a, { visual: { kind: 'tenframe', filled: a, icon: '💎' } }) } },
-      { key: 'make-ten-bridge-drag', name: '凑十法', icon: '🌉', desc: '拆小数、先凑十', grades: [1, 2], gen: () => { const a = ri(6, 9); const b = ri(11 - a, 9); return q(`${a} + ${b}：把 ${b} 拆成 ${10 - a} 和 ？，先凑十`, b - (10 - a)) } },
+      { key: 'make-ten-bridge-drag', name: '凑十法', icon: '🌉', desc: '拆小数、先凑十', grades: [1, 2], gen: () => { const a = ri(6, 9); const b = ri(11 - a, 9); return q(`${a} + ${b} = ？`, a + b, { visual: { kind: 'maketen', a, b, need: 10 - a } }) } },
       { key: 'make-ten-subtraction', name: '平十减法', icon: '🪜', desc: '先减到十再减', grades: [1, 2], gen: () => { const a = ri(11, 18); const b = ri(a - 9, a - 2); return q(`${a} - ${b}：先算 ${a} - ${a - 10} = 10，再算 10 - ？`, 10 - (b - (a - 10))) } },
       { key: 'break-ten-subtraction-advanced', name: '破十法', icon: '💥', desc: '先破十、再相加', grades: [1, 2], gen: () => { const a = ri(11, 18); const b = ri(Math.max(a - 9, 2), a - 2); const ans = a - b; return q(`${a} - ${b}：先算 10 - ${b} = ${10 - b}，再算 ${10 - b} + ？`, ans - (10 - b)) } },
       { key: 'continuous-addition-step', name: '连加计算', icon: '➕', desc: '三个数依次相加', grades: [1, 2, 3], gen: () => { const m = 30; const a = ri(2, Math.floor(m / 3)); const b = ri(2, Math.floor(m / 3)); const c = ri(1, m - a - b); return q(`${a} + ${b} + ${c}`, a + b + c) } },

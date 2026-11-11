@@ -51,6 +51,23 @@
               <text class="bond-num q">?</text>
             </view>
           </view>
+          <!-- 凑十法图形化：大数加小数，把小数拆成「凑十的数」和「剩下的数」 -->
+          <view class="bond" v-if="current.visual.kind === 'maketen'">
+            <view class="mt-row">
+              <text class="mt-num">{{ current.visual.a }}</text>
+              <text class="mt-plus">+</text>
+              <text class="mt-num mt-b">{{ current.visual.b }}</text>
+            </view>
+            <view class="bond-fork">
+              <view class="bond-line l"></view>
+              <view class="bond-line r"></view>
+            </view>
+            <view class="bond-nums">
+              <text class="bond-num">{{ current.visual.need }}</text>
+              <text class="bond-num q">{{ current.visual.b - current.visual.need }}</text>
+            </view>
+            <text class="mt-step">先凑十：{{ current.visual.a }} + {{ current.visual.need }} = 10</text>
+          </view>
           <view class="dots" v-if="current.visual.kind === 'dots' && !current.visual.group">
             <text class="dot" v-for="i in current.visual.n" :key="i">{{ current.visual.icon }}</text>
           </view>
@@ -150,6 +167,7 @@
         <view class="mark" v-if="feedback === 'wrong'">
           <text class="mark-icon">✕</text>
           <text class="mark-text">正确答案是 {{ current.answer }}</text>
+          <text class="mark-sub">没关系，下次努力！</text>
         </view>
 
         <view class="next-btn" v-if="feedback && !settings.autoNext" @click="next">
@@ -179,7 +197,7 @@ import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
 import { stagePointGenerate } from '@/common/stages'
 import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
-import { sfx, speak, cheerRight, CHEERS_STREAK } from '@/common/sound'
+import { sfx, speak, cheerRight, cheerWrong, CHEERS_STREAK } from '@/common/sound'
 
 // 骰子点阵：3x3 槽位（0-8）
 const PIPS = {
@@ -400,7 +418,8 @@ function settle(my) {
     if (rightCount.value > 0 && rightCount.value % 5 === 0 && wrongList.value.length === 0) {
       sfx('combo', rightCount.value / 5)
       speak(CHEERS_STREAK[Math.floor(Math.random() * CHEERS_STREAK.length)])
-    } else if (Math.random() < 0.25) {
+    } else {
+      // 每次答对都鼓励（speak 内部 2 秒节流，不会连播）
       cheerRight()
     }
   } else {
@@ -409,6 +428,7 @@ function settle(my) {
     feedback.value = 'wrong'
     buzz(true)
     sfx('wrong')
+    cheerWrong()
   }
 
   // 自动跳题：开启时按答题速度给不同停顿；关闭时等孩子自己点「继续」
@@ -634,6 +654,11 @@ function quit() {
   color: #6d6157;
   font-weight: 600;
 }
+.mark-sub {
+  font-size: 24rpx;
+  color: #a79c92;
+  margin-top: 8rpx;
+}
 .card.wrong .mark-icon {
   color: #ff6b6b;
 }
@@ -849,16 +874,50 @@ function quit() {
 .bond-num.q {
   color: #ff9a4d;
 }
+/* 凑十法图形化 */
+.mt-row {
+  display: flex;
+  align-items: center;
+  gap: 22rpx;
+}
+.mt-num {
+  font-size: 64rpx;
+  font-weight: 900;
+  color: #332c26;
+  background: #f8f5f0;
+  border-radius: 20rpx;
+  padding: 6rpx 30rpx;
+}
+.mt-num.mt-b {
+  color: #e86a10;
+  background: #fff;
+  border: 3rpx solid #ffd9ae;
+}
+.mt-plus {
+  font-size: 48rpx;
+  font-weight: 800;
+  color: #b3a897;
+}
+.mt-step {
+  margin-top: 18rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #c46a1d;
+  background: #fff3e2;
+  border-radius: 100rpx;
+  padding: 10rpx 28rpx;
+}
 
 /* —— 配对玩法 —— */
 .match {
   display: flex;
   flex-direction: column;
   align-items: center;
+  width: 100%;
 }
 .match-cols {
   display: flex;
-  gap: 26rpx;
+  gap: 40rpx;
   width: 100%;
 }
 .match-col {
@@ -878,6 +937,9 @@ function quit() {
   font-size: 40rpx;
   font-weight: 800;
   color: #332c26;
+  white-space: nowrap;
+  padding: 0 8rpx;
+  box-sizing: border-box;
 }
 .mcell.sel {
   background: #ffe9d6;

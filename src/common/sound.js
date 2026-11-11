@@ -129,6 +129,7 @@ export const CHEERS_RIGHT = ['答对啦，真棒！', '太厉害了！', '你真
 export const CHEERS_STREAK = ['连续答对，太厉害啦！', '火力全开！', '无敌啦！', '小脑瓜真灵！']
 export const CHEERS_END_GOOD = ['全部答对，你太棒了！', '满分！继续加油！', '真是数学小达人！']
 export const CHEERS_END = ['今天也很棒，继续加油！', '有进步哦！', '练习完了，休息一下吧！']
+export const CHEERS_WRONG = ['没关系，下次努力！', '错了没关系，再来一次！', '快接近啦，再想想！', '没关系，我们下一题更努力！']
 
 let lastSpeakTs = 0
 
@@ -153,4 +154,9 @@ export function speak(text) {
 
 export function cheerRight() {
   speak(CHEERS_RIGHT[Math.floor(Math.random() * CHEERS_RIGHT.length)])
+}
+
+// 答错的温柔鼓励
+export function cheerWrong() {
+  speak(CHEERS_WRONG[Math.floor(Math.random() * CHEERS_WRONG.length)])
 }

@@ -85,7 +85,7 @@ const G = {
   addSub: (max) => () => (Math.random() < 0.5 ? G.add(max)() : G.sub(max)()),
   chain: (max) => () => { const a = ri(2, Math.floor(max / 3)); const b = ri(2, Math.floor(max / 3)); const c = ri(1, max - a - b); return q(`${a} + ${b} + ${c}`, a + b + c) },
   chainSub: (max) => () => { const a = ri(Math.floor(max / 2), max); const b = ri(1, a - 2); const c = ri(1, a - b - 1); return q(`${a} - ${b} - ${c}`, a - b - c) },
-  missAdd: (max) => () => { const s = ri(2, max); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a, { visual: { kind: 'dots', icon: pick(['🍎', '⭐', '🍬']), n: s, group: a } }) },
+  missAdd: (max) => () => { const s = ri(2, max); const a = ri(1, s - 1); return q(`${a} + ? = ${s}`, s - a) },
   missSub: (max) => () => { const a = ri(3, max); const c = ri(1, a - 1); return q(`${a} - ? = ${c}`, a - c) },
   judge: (max) => () => { const isAdd = Math.random() < 0.5; let val, l, r; if (isAdd) { l = ri(1, max - 1); r = ri(1, max - l); val = l + r } else { l = ri(2, max); r = ri(1, l); val = l - r } const ok = Math.random() < 0.5; let shown = val; if (!ok) { shown = Math.max(0, val + pick([-3, -2, -1, 1, 2, 3])); if (shown === val) shown = val + 2 } return q(`${l} ${isAdd ? '+' : '-'} ${r} = ${shown}`, ok ? '√' : '×', { type: 'judge' }) },
   // 进退位 / 竖式
@@ -256,7 +256,7 @@ function LV(title, units) {
 export const STAGES = [
   {
     key: 'prek', name: '启蒙', icon: '🔔', grades: [7, 1],
-    desc: '0-6 岁学龄前 · 一年级零基础，从数数认数开始',
+    desc: '幼儿园大班～一年级 · 从数数认数开始',
     levels: [
       LV('数一数 认一认', [
         U('🔢', '认识数字 1-5', [

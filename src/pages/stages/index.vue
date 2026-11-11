@@ -18,7 +18,7 @@
         >
           <text class="tab-icon">{{ s.icon }}</text>
           <text class="tab-name">{{ s.name }}</text>
-          <text class="tab-sub">{{ stagePointCount(s, grade) }} 个</text>
+          <text class="tab-sub">{{ stagePointCount(s) }} 个</text>
         </view>
       </view>
     </scroll-view>

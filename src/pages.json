@@ -98,7 +98,8 @@
     "navigationBarBackgroundColor": "#FFF9F0",
     "backgroundColor": "#FFF9F0",
     "backgroundColorTop": "#FFF9F0",
-    "backgroundColorBottom": "#FFF9F0"
+    "backgroundColorBottom": "#FFF9F0",
+    "popGesture": "close"
   },
   "tabBar": {
     "color": "#A79C92",

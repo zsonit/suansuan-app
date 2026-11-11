@@ -138,6 +138,11 @@ export const GROUPS = [
 
 export const MODES = GROUPS.flatMap((g) => g.modes)
 
+// 每个模式一张独立卡片图（解决「同组卡片图案重复」）
+MODES.forEach((m) => {
+  if (!m.img) m.img = `/static/icons/mode/${m.key}.png`
+})
+
 // 分年级课程表：每项 [模式, 推荐难度]，按人教版教材进度排列
 export const GRADES = [
   {
