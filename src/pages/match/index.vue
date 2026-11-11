@@ -21,7 +21,7 @@
           :class="{ sel: selLeft === it.key, matched: it.matched, shake: shakeL === it.key }"
           @click="tapLeft(it)"
         >
-          {{ it.text }} =
+          {{ exprOf(it.text) }}
         </view>
       </view>
       <view class="col">
@@ -114,6 +114,11 @@ function buzz(long) {
   try {
     long ? uni.vibrateLong() : uni.vibrateShort()
   } catch (e) {}
+}
+
+// 题干自带 = 或 ○ 时不再追加等号
+function exprOf(t) {
+  return /[=○]/.test(t) ? t : t + ' ='
 }
 
 function shuffled(arr) {
@@ -251,7 +256,7 @@ function quit() {
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-top: calc(var(--status-bar-height) + 16rpx);
+  padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 16rpx);
   background: #fff9f0;
   display: flex;
   flex-direction: column;

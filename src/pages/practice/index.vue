@@ -491,7 +491,7 @@ function quit() {
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-top: calc(var(--status-bar-height) + 16rpx);
+  padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 16rpx);
   background: #fff9f0;
   display: flex;
   flex-direction: column;

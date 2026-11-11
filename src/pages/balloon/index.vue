@@ -13,7 +13,7 @@
     </view>
 
     <view class="expr-card" :class="feedback">
-      <text class="expr">{{ current.text }} =</text>
+      <text class="expr">{{ exprOf(current.text) }}</text>
       <text class="tip" v-if="feedback === 'right'">砰！答对啦 🎉</text>
       <text class="tip bad" v-if="feedback === 'wrong'">正确答案是 {{ current.answer }}</text>
       <text class="tip" v-else-if="!feedback">点爆装着正确答案的气球！</text>
@@ -60,6 +60,10 @@ const SLOTS = [
 const COLORS = ['c-red', 'c-blue', 'c-yellow', 'c-green']
 
 const settings = ref(getSettings())
+// 题干自带 = 或 ○ 时不再追加等号
+function exprOf(t) {
+  return /[=○]/.test(t) ? t : t + ' ='
+}
 const list = ref([])
 const idx = ref(0)
 const balloons = ref([])
@@ -203,7 +207,7 @@ function quit() {
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-top: calc(var(--status-bar-height) + 16rpx);
+  padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 16rpx);
   background: linear-gradient(180deg, #bfe3ff 0%, #e3f2ff 55%, #fff9f0 100%);
   display: flex;
   flex-direction: column;

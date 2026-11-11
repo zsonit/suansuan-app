@@ -27,7 +27,7 @@
     </view>
 
     <view class="expr-card" :class="feedback">
-      <text class="expr">{{ current.text }} =</text>
+      <text class="expr">{{ exprOf(current.text) }}</text>
       <text class="fb up" v-if="feedback === 'right'">⏱️ +1 秒</text>
       <text class="fb down" v-else-if="feedback === 'wrong'">⏱️ -3 秒，正确是 {{ current.answer }}</text>
       <text class="fb dim" v-else>越答越快，连击越高越厉害！</text>
@@ -60,6 +60,10 @@ const TICK = 100
 const START_MS = 600 // 60 秒（0.1s 单位）
 
 const settings = ref(getSettings())
+// 题干自带 = 或 ○ 时不再追加等号
+function exprOf(t) {
+  return /[=○]/.test(t) ? t : t + ' ='
+}
 const list = ref([])
 const idx = ref(0)
 const options = ref([])
@@ -230,7 +234,7 @@ function quit() {
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-top: calc(var(--status-bar-height) + 16rpx);
+  padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 16rpx);
   background: linear-gradient(180deg, #2d2a4a 0%, #454273 100%);
   display: flex;
   flex-direction: column;

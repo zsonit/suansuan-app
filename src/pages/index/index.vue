@@ -298,7 +298,7 @@ function startGrade() {
 .page {
   min-height: 100vh;
   box-sizing: border-box;
-  padding-top: calc(var(--status-bar-height) + 24rpx);
+  padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 24rpx);
   padding-bottom: 220rpx;
   background: #fff9f0;
 }
