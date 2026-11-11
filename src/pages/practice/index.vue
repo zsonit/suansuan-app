@@ -15,6 +15,36 @@
 
     <view class="stage">
       <view class="card" :class="feedback">
+        <!-- 图形化说题：十格框 / 骰子 / 物件图 -->
+        <view class="qvisual" v-if="current.visual">
+          <view class="tf" v-if="current.visual.kind === 'tenframe'">
+            <view class="tf-row">
+              <view v-for="i in 5" :key="'a' + i" class="tf-cell">
+                <text v-if="i <= current.visual.filled" class="tf-icon">{{ current.visual.icon }}</text>
+              </view>
+            </view>
+            <view class="tf-row">
+              <view v-for="i in 5" :key="'b' + i" class="tf-cell">
+                <text v-if="i + 5 <= current.visual.filled" class="tf-icon">{{ current.visual.icon }}</text>
+              </view>
+            </view>
+          </view>
+          <view class="dices" v-if="current.visual.kind === 'dice'">
+            <view class="dice" v-for="(d, di) in [current.visual.a, current.visual.b]" :key="di">
+              <view
+                v-for="i in 9"
+                :key="i"
+                class="pip-slot"
+              >
+                <view class="pip" v-if="PIPS[d].includes(i - 1)"></view>
+              </view>
+            </view>
+          </view>
+          <view class="dots" v-if="current.visual.kind === 'dots'">
+            <text class="dot" v-for="i in current.visual.n" :key="i">{{ current.visual.icon }}</text>
+          </view>
+        </view>
+
         <text
           class="expr"
           :class="{ small: String(current.text).length > 9 }"
@@ -33,6 +63,35 @@
           <text v-if="input" class="answer-num">{{ input }}</text>
           <text v-else class="answer-hold">?</text>
           <view class="caret" v-if="!feedback"></view>
+        </view>
+
+        <!-- 配对玩法：先点算式，再点它的答案 -->
+        <view class="match" v-if="qType === 'match' && !feedback">
+          <view class="match-cols">
+            <view class="match-col">
+              <view
+                v-for="(p, i) in current.pairs"
+                :key="'l' + i"
+                class="mcell"
+                :class="{ sel: selLeft === i, done: matched.has(i), shake: shakeL === i }"
+                @click="tapLeft(i)"
+              >
+                {{ p.l }}
+              </view>
+            </view>
+            <view class="match-col">
+              <view
+                v-for="(r, i) in current.rights"
+                :key="'r' + i"
+                class="mcell"
+                :class="{ done: matchedR.has(r), shake: shakeR === i }"
+                @click="tapRight(r, i)"
+              >
+                {{ r }}
+              </view>
+            </view>
+          </view>
+          <text class="match-hint">{{ selLeft === null ? '先点一个算式' : '再点它的答案' }}</text>
         </view>
 
         <!-- 比大小：选符号 -->
@@ -99,8 +158,19 @@ import { ref, computed, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
+import { stagePointGenerate } from '@/common/stages'
 import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
 import { sfx, speak, cheerRight, CHEERS_STREAK } from '@/common/sound'
+
+// 骰子点阵：3x3 槽位（0-8）
+const PIPS = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 3, 6, 2, 5, 8]
+}
 
 const baseKeys = [
   { val: '1', label: '1', type: 'num' },
@@ -137,6 +207,13 @@ const feedback = ref('') // '' | 'right' | 'wrong'
 const elapsed = ref(0)
 const cfg = ref({ mode: 'add', difficulty: 1, count: 10, source: '', key: '' })
 
+// 配对题状态
+const selLeft = ref(null)
+const matched = ref(new Set())
+const matchedR = ref(new Set())
+const shakeL = ref(-1)
+const shakeR = ref(-1)
+
 let tick = null
 let jump = null
 
@@ -157,11 +234,14 @@ onLoad((q) => {
     count: Number(q.count || 10),
     source: q.source || '',
     key: q.key || '',
+    fun: q.fun || '',
     grade: Number(q.grade || 0)
   }
 
   if (cfg.value.source === 'wrong') {
     list.value = fromWrong(getWrong())
+  } else if (cfg.value.source === 'point' && cfg.value.key) {
+    list.value = stagePointGenerate(cfg.value.key, cfg.value.count, !!cfg.value.fun)
   } else if (cfg.value.source === 'lemiao' && cfg.value.key) {
     list.value = lemiaoGenerate(cfg.value.key, cfg.value.count)
   } else if (cfg.value.source === 'grade' && cfg.value.grade) {
@@ -225,6 +305,41 @@ function submitChoice(val) {
   settle(val)
 }
 
+// —— 配对玩法 ——
+function tapLeft(i) {
+  if (feedback.value || matched.value.has(i)) return
+  selLeft.value = i
+  sfx('soft')
+}
+
+function tapRight(r, ri_) {
+  if (feedback.value || selLeft.value === null || matchedR.value.has(r)) return
+  const q = current.value
+  const pair = q.pairs[selLeft.value]
+  if (pair.r === r) {
+    // 配对成功
+    matched.value = new Set([...matched.value, selLeft.value])
+    matchedR.value = new Set([...matchedR.value, r])
+    selLeft.value = null
+    sfx('pop')
+    buzz(false)
+    if (matched.value.size === q.pairs.length) {
+      settle('__match__')
+    }
+  } else {
+    // 配错了：抖动提示，本组题记一次错
+    shakeR.value = ri_
+    sfx('wrong')
+    buzz(true)
+    if (!wrongList.value.some((w) => w.type === 'match' && w.mode === (q.mode || ''))) {
+      wrongList.value.push({ text: `${pair.l} ↔ ${r}（配对）`, answer: pair.r, your: r, type: 'match' })
+    }
+    setTimeout(() => {
+      shakeR.value = -1
+    }, 400)
+  }
+}
+
 function parseFrac(s) {
   const t = String(s || '').trim()
   const m = t.match(/^(\d+)\/(\d+)$/)
@@ -278,6 +393,9 @@ function next() {
   jump = null
   input.value = ''
   feedback.value = ''
+  selLeft.value = null
+  matched.value = new Set()
+  matchedR.value = new Set()
   if (idx.value + 1 >= list.value.length) finish()
   else idx.value++
 }
@@ -287,7 +405,7 @@ function finish() {
   tick = null
 
   const rec = {
-    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
+    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'point' ? `P_${cfg.value.key}${cfg.value.fun ? '_fun' : ''}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
     total: total.value,
     right: rightCount.value,
     durationMs: elapsed.value * 1000,
@@ -295,7 +413,8 @@ function finish() {
     difficulty: cfg.value.difficulty,
     count: cfg.value.count,
     source: cfg.value.source,
-    grade: cfg.value.grade
+    grade: cfg.value.grade,
+    key: cfg.value.key
   }
 
   addRecord(rec)
@@ -549,6 +668,137 @@ function quit() {
 }
 .pick-txt.small {
   font-size: 32rpx;
+}
+
+/* —— 图形化说题 —— */
+.qvisual {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 26rpx;
+}
+.tf {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  background: #fff8ef;
+  border: 4rpx solid #f2c98c;
+  border-radius: 20rpx;
+  padding: 16rpx 20rpx;
+}
+.tf-row {
+  display: flex;
+  gap: 12rpx;
+}
+.tf-cell {
+  width: 86rpx;
+  height: 86rpx;
+  background: #fff;
+  border: 3rpx dashed #e8c28a;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tf-icon {
+  font-size: 46rpx;
+  line-height: 1;
+}
+.dices {
+  display: flex;
+  gap: 34rpx;
+}
+.dice {
+  width: 150rpx;
+  height: 150rpx;
+  background: #fff;
+  border: 4rpx solid #e6ddd0;
+  border-radius: 26rpx;
+  box-shadow: 0 8rpx 20rpx rgba(150, 120, 80, 0.12);
+  display: flex;
+  flex-wrap: wrap;
+  padding: 14rpx;
+  box-sizing: border-box;
+}
+.pip-slot {
+  width: 33.33%;
+  height: 33.33%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pip {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  background: #ff7a3c;
+}
+.dots {
+  max-width: 560rpx;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10rpx;
+}
+.dot {
+  font-size: 48rpx;
+  line-height: 1.15;
+}
+
+/* —— 配对玩法 —— */
+.match {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.match-cols {
+  display: flex;
+  gap: 26rpx;
+  width: 100%;
+}
+.match-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+.mcell {
+  height: 104rpx;
+  background: #f8f5f0;
+  border: 3rpx solid #eee5d8;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #332c26;
+}
+.mcell.sel {
+  background: #ffe9d6;
+  border-color: #ff9a4d;
+  color: #e86a10;
+}
+.mcell.done {
+  background: #e6f7ea;
+  border-color: #8fdca4;
+  color: #b8cfbe;
+  pointer-events: none;
+}
+.mcell.shake {
+  animation: shake 0.35s;
+  border-color: #f56c6c;
+  background: #fdecec;
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10rpx); }
+  50% { transform: translateX(10rpx); }
+  75% { transform: translateX(-6rpx); }
+}
+.match-hint {
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: #b3a897;
 }
 
 .pad {

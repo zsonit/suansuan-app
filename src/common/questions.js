@@ -3,6 +3,7 @@
 
 import * as lang from './langdata.js'
 import { lemiaoAct, lemiaoName } from './lemiao.js'
+import { stagePointName } from './stages.js'
 
 export const LEVELS = [
   { key: 1, name: '10以内', max: 10, mulMax: 5 },
@@ -667,6 +668,10 @@ export function fromWrong(items) {
 }
 
 export function modeName(key) {
+  if (String(key).startsWith('P_')) {
+    const k = String(key).slice(2).replace(/_fun$/, '')
+    return `${stagePointName(k)}${String(key).endsWith('_fun') ? '·趣味' : ''}`
+  }
   if (String(key).startsWith('L_')) return lemiaoName(String(key).slice(2))
   if (key === 'grade') return '年级综合'
   if (String(key).startsWith('grade')) {

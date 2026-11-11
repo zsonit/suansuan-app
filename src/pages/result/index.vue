@@ -116,6 +116,13 @@ function again() {
     })
     return
   }
+  if (String(r.mode).startsWith('P_')) {
+    const pk = String(r.mode).slice(2).replace(/_fun$/, '')
+    uni.redirectTo({
+      url: `/pages/practice/index?source=point&key=${pk}&fun=${r.mode.endsWith('_fun') ? 1 : ''}&count=${r.count || 10}`
+    })
+    return
+  }
   if (String(r.mode).startsWith('L_')) {
     uni.redirectTo({
       url: `/pages/practice/index?source=lemiao&key=${String(r.mode).slice(2)}&count=${r.count || 10}`

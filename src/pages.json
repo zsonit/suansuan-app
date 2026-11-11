@@ -45,6 +45,13 @@
       }
     },
     {
+      "path": "pages/stages/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "闯关学段"
+      }
+    },
+    {
       "path": "pages/balloon/index",
       "style": {
         "navigationStyle": "custom",

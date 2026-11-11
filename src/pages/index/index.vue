@@ -22,6 +22,18 @@
         </view>
       </view>
 
+      <!-- 闯关学段入口 -->
+      <view class="stages-entry" @click="goStages">
+        <view class="se-left">
+          <text class="se-title">闯关学段</text>
+          <text class="se-sub">启蒙 · 成长 · 提高 · 进阶 · 跨越 · 培优 · 精英</text>
+        </view>
+        <view class="se-icons">
+          <text v-for="s in STAGES" :key="s.key" class="se-icon">{{ s.icon }}</text>
+        </view>
+        <text class="se-arrow">›</text>
+      </view>
+
       <view class="sec-title">年级</view>
       <view class="grade-pills">
         <view class="gpill" :class="{ active: gradeSel === 0 }" @click="selectGrade(0)">
@@ -131,6 +143,7 @@ import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { GROUPS, GRADES, LEVELS, COUNTS, modeName, modeOf } from '@/common/questions'
 import { LEMIAO_GROUPS } from '@/common/lemiao'
+import { STAGES } from '@/common/stages'
 import { sfx } from '@/common/sound'
 import { getSettings, getToday, getStreak } from '@/common/store'
 
@@ -259,6 +272,12 @@ function start() {
   })
 }
 
+function goStages() {
+  uni.navigateTo({
+    url: `/pages/stages/index?grade=${gradeSel.value || 0}`
+  })
+}
+
 function startGrade() {
   if (!gradeSel.value) return
   uni.navigateTo({
@@ -320,6 +339,49 @@ function startGrade() {
   padding: 40rpx 36rpx 34rpx;
   box-shadow: 0 18rpx 40rpx rgba(255, 122, 61, 0.28);
   overflow: hidden;
+}
+
+/* 闯关学段入口 */
+.stages-entry {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #fff3e2, #ffe9d2);
+  border: 3rpx solid #ffd9ae;
+  border-radius: 26rpx;
+  padding: 24rpx 24rpx;
+  margin-top: 22rpx;
+}
+.stages-entry:active {
+  transform: scale(0.98);
+}
+.se-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.se-title {
+  font-size: 30rpx;
+  font-weight: 900;
+  color: #b3591a;
+}
+.se-sub {
+  font-size: 21rpx;
+  color: #c99a6e;
+  margin-top: 6rpx;
+}
+.se-icons {
+  display: flex;
+  margin: 0 8rpx;
+}
+.se-icon {
+  font-size: 30rpx;
+  margin-left: 4rpx;
+}
+.se-arrow {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #d8a06a;
 }
 .hero-deco {
   position: absolute;
