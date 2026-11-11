@@ -128,6 +128,7 @@ export const GROUPS = [
     key: 'unit',
     name: '单位换算',
     emoji: '📏',
+    img: '/static/icons/lm/unit.png',
     modes: [
       { key: 'unit', name: '单位换算', emoji: '📐', desc: '米厘米 / 时分 / 元角', levels: [1, 2, 3, 4] }
     ]

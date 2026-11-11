@@ -317,9 +317,15 @@ export const LEMIAO_GROUPS = [
   }
 ]
 
-// 汇总所有活动（采样一次得到默认交互类型，供错题本还原）
+// 汇总所有活动（每张卡配专属图案，供首页大图卡片展示；采样一次得到默认交互类型，供错题本还原）
 export const LEMIAO_ACTS = LEMIAO_GROUPS.flatMap((g) =>
-  g.acts.map((a) => Object.assign({}, a, { group: g.key, groupName: g.name }))
+  g.acts.map((a) =>
+    Object.assign({}, a, {
+      group: g.key,
+      groupName: g.name,
+      img: `/static/icons/lm/${a.key}.png`
+    })
+  )
 )
 for (const a of LEMIAO_ACTS) {
   try {

@@ -69,19 +69,19 @@
           {{ g.name }}
         </view>
         <text class="sec-desc">{{ g.desc }}</text>
-        <view class="lmodes">
+        <view class="modes">
           <view
             v-for="a in g.acts"
             :key="a.key"
-            class="lmode"
+            class="mode"
             @click="startLemiao(a)"
           >
-            <view class="lmode-icon">
-              <text class="lmode-emoji">{{ a.icon }}</text>
+            <view class="mode-pic">
+              <image class="mode-img" :src="a.img" mode="aspectFill" />
             </view>
-            <view class="lmode-info">
-              <text class="lmode-name">{{ a.name }}</text>
-              <text class="lmode-desc">{{ a.desc }}</text>
+            <view class="mode-info">
+              <text class="mode-name">{{ a.name }}</text>
+              <text class="mode-desc">{{ a.desc }}</text>
             </view>
           </view>
         </view>
@@ -379,66 +379,6 @@ function startGrade() {
   font-size: 22rpx;
   color: #b3a897;
   line-height: 1.5;
-}
-
-/* 乐喵题卡：左侧彩色图标 + 标题 + 副标题 */
-.lmodes {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-}
-.lmode {
-  width: 48%;
-  box-sizing: border-box;
-  background: #fff;
-  border: 3rpx solid #fff;
-  border-radius: 28rpx;
-  padding: 20rpx 18rpx;
-  margin-bottom: 20rpx;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 8rpx 24rpx rgba(180, 150, 120, 0.1);
-}
-.lmode:active {
-  transform: scale(0.97);
-  background: #fff6ee;
-}
-.lmode-icon {
-  width: 76rpx;
-  height: 76rpx;
-  flex-shrink: 0;
-  border-radius: 22rpx;
-  background: linear-gradient(135deg, #fff1e0, #ffe3c8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 16rpx;
-}
-.lmode-emoji {
-  font-size: 40rpx;
-  line-height: 1;
-}
-.lmode-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-}
-.lmode-name {
-  font-size: 27rpx;
-  font-weight: 700;
-  color: #332c26;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.lmode-desc {
-  font-size: 20rpx;
-  color: #a79c92;
-  margin-top: 6rpx;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .modes {
