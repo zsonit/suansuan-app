@@ -973,6 +973,7 @@ function quit() {
   display: flex;
   flex-wrap: wrap;
   padding: 10rpx 24rpx calc(24rpx + env(safe-area-inset-bottom));
+  margin-bottom: 5vh;
 }
 .key {
   width: 31.33%;
