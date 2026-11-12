@@ -80,7 +80,19 @@ public class KioskPlugin extends Plugin {
     @PluginMethod
     public void suspend(PluginCall call) {
         Integer ms = call.getInt("ms", 60000);
-        suspendUntil = System.currentTimeMillis() + (ms == null ? 60000L : ms.longValue());
+        long until = System.currentTimeMillis() + (ms == null ? 60000L : ms.longValue());
+        suspendUntil = until;
+        // 长时间解锁（先学再看）持久化到 SharedPreferences，App 进程被杀也生效
+        sp().edit().putLong("unlock_until", until).apply();
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void goHome(PluginCall call) {
+        Intent i = new Intent(Intent.ACTION_MAIN);
+        i.addCategory(Intent.CATEGORY_HOME);
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        getContext().startActivity(i);
         call.resolve();
     }
 

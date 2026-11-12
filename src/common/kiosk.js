@@ -76,6 +76,21 @@ export async function openAccessibilitySettings() {
   if (p) await p.openAccessibilitySettings()
 }
 
+// 回到桌面（让孩子去看视频）
+export async function goHome() {
+  const p = cap()
+  if (p) await p.goHome()
+}
+
+// 先学再看：暂停拉回 min 分钟（原生持久化，App 被杀也生效），然后回桌面
+export async function startUnlock(min) {
+  const p = cap()
+  if (!p) return false
+  await p.suspend({ ms: min * 60 * 1000 })
+  await p.goHome()
+  return true
+}
+
 export async function verifyPin(cfg, pin) {
   if (!cfg || !pin) return false
   return (await sha256(cfg.salt + ':' + pin)) === cfg.pinHash

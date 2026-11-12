@@ -8,6 +8,10 @@
       <text class="sub">今天已练 {{ today.n }} 题 · 答对 {{ today.right }} 题</text>
     </view>
 
+    <view class="unlock-banner" v-if="unlockLeftMin > 0">
+      🍿 自由时间还剩 {{ unlockLeftMin }} 分钟，到时自动回来练习
+    </view>
+
     <scroll-view scroll-y class="body" :show-scrollbar="false">
       <view class="hero" @click="startGrade">
         <view class="hero-deco">✨</view>
@@ -105,6 +109,30 @@
         </view>
       </template>
 
+      <template v-if="openView.length">
+        <view class="sec-title">
+          <text class="sec-emoji">🎓</text>
+          题了个题 · 开放题库
+        </view>
+        <text class="sec-desc">来自开源项目 StudyOnTV 的精选题库（50 题）</text>
+        <view class="modes">
+          <view
+            v-for="b in openView"
+            :key="b.key"
+            class="mode"
+            @click="startOpen(b.key)"
+          >
+            <view class="mode-pic">
+              <text class="mode-fallback">{{ b.icon }}</text>
+            </view>
+            <view class="mode-info">
+              <text class="mode-name">{{ b.name }}</text>
+              <text class="mode-desc">{{ b.desc }}</text>
+            </view>
+          </view>
+        </view>
+      </template>
+
       <template v-if="!isLang">
         <view class="sec-title">难度</view>
         <view class="pills">
@@ -137,13 +165,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { GROUPS, GRADES, LEVELS, COUNTS, modeOf } from '@/common/questions'
 import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
+import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, getToday, getStreak } from '@/common/store'
+import { getSettings, getToday, getStreak, getUnlockUntil } from '@/common/store'
 
 const gradeSel = ref(1)
 const mode = ref('add')
@@ -208,6 +237,21 @@ function startLemiao(a) {
   sfx('start')
 }
 
+// 题了个题开放题库
+const openView = Object.values(OPEN_BANKS).map((b) => ({
+  key: b.key,
+  name: b.name,
+  icon: b.icon,
+  desc: b.desc
+}))
+
+function startOpen(bankKey) {
+  uni.navigateTo({
+    url: `/pages/practice/index?source=open&key=${bankKey}&count=${count.value}`
+  })
+  sfx('start')
+}
+
 const availLevels = computed(() => {
   const m = modeOf(mode.value)
   return LEVELS.filter((l) => !m || !m.levels || m.levels.includes(l.key))
@@ -254,6 +298,32 @@ onShow(() => {
   settings.value = getSettings()
   today.value = getToday()
   streak.value = getStreak()
+  refreshUnlock()
+})
+
+// 自由时间倒计时横幅
+const now = ref(Date.now())
+let unlockTick = null
+const unlockUntil = ref(0)
+const unlockLeftMin = computed(() => {
+  if (!unlockUntil.value) return 0
+  return Math.max(0, Math.ceil((unlockUntil.value - now.value) / 60000))
+})
+function refreshUnlock() {
+  unlockUntil.value = getUnlockUntil()
+  if (unlockUntil.value > Date.now() && !unlockTick) {
+    unlockTick = setInterval(() => {
+      now.value = Date.now()
+      if (now.value >= unlockUntil.value) {
+        clearInterval(unlockTick)
+        unlockTick = null
+        unlockUntil.value = 0
+      }
+    }, 15000)
+  }
+}
+onUnmounted(() => {
+  if (unlockTick) clearInterval(unlockTick)
 })
 
 const GAME_KEYS = ['balloon', 'match', 'racer', 'balance', 'memory']
@@ -326,6 +396,17 @@ function startGrade() {
   margin-top: 10rpx;
   font-size: 26rpx;
   color: #a79c92;
+}
+
+.unlock-banner {
+  margin: 16rpx 40rpx 0;
+  padding: 16rpx 24rpx;
+  background: #e8f7ee;
+  border: 3rpx solid #bfe8cf;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #2e8b57;
+  font-weight: 600;
 }
 
 .body {

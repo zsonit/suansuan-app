@@ -86,6 +86,70 @@
     </view>
 
     <view class="group">
+      <view class="group-title">先学再看 · 答题解锁观看时间</view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">答题解锁观看时间</text>
+          <text class="row-desc">配合专注锁定：答完一组且正确率达标，可去桌面看视频，时间到自动拉回</text>
+        </view>
+        <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
+      </view>
+      <template v-if="watchRules.on">
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">每组解锁</text>
+            <text class="row-desc">答完一组题奖励的观看时间</text>
+          </view>
+          <view class="mini-pills">
+            <view
+              v-for="m in [5, 10, 15, 20]"
+              :key="m"
+              class="mpill"
+              :class="{ active: watchRules.minutes === m }"
+              @click="setWatch('minutes', m)"
+            >
+              {{ m }}分
+            </view>
+          </view>
+        </view>
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">每天最多看</text>
+            <text class="row-desc">超出后当天不再解锁，第二天重置</text>
+          </view>
+          <view class="mini-pills">
+            <view
+              v-for="c in [15, 30, 60, 120]"
+              :key="c"
+              class="mpill"
+              :class="{ active: watchRules.cap === c }"
+              @click="setWatch('cap', c)"
+            >
+              {{ c }}分
+            </view>
+          </view>
+        </view>
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">解锁门槛</text>
+            <text class="row-desc">正确率达标才能获得奖励</text>
+          </view>
+          <view class="mini-pills">
+            <view
+              v-for="p in [60, 80]"
+              :key="p"
+              class="mpill"
+              :class="{ active: watchRules.passAcc === p }"
+              @click="setWatch('passAcc', p)"
+            >
+              {{ p }}%
+            </view>
+          </view>
+        </view>
+      </template>
+    </view>
+
+    <view class="group">
       <view class="row danger" @click="doClear">
         <view class="row-main">
           <text class="row-title">清空所有数据</text>
@@ -147,7 +211,7 @@
 
         <!-- ====== 解锁流程 ====== -->
         <template v-else-if="overlay === 'unlock'">
-          <text class="sheet-title">{{ unlockPurpose === 'enable' ? '输入密码开启' : unlockPurpose === 'reset' ? '修改密码 / 关闭锁定' : '关闭专注锁定' }}</text>
+          <text class="sheet-title">{{ unlockPurpose === 'enable' ? '输入密码开启' : unlockPurpose === 'watch' ? '输入密码修改规则' : unlockPurpose === 'reset' ? '修改密码 / 关闭锁定' : '关闭专注锁定' }}</text>
 
           <template v-if="!forgotMode">
             <text class="sheet-desc">输入锁定密码</text>
@@ -205,7 +269,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getSettings, saveSettings, clearAll } from '@/common/store'
+import { getSettings, saveSettings, clearAll, getWatchRules, saveWatchRules } from '@/common/store'
 import { sfx, speak } from '@/common/sound'
 import {
   QUESTIONS, getConfig, saveConfig, setEnabled, isEnabled, isServiceOn,
@@ -263,6 +327,47 @@ function onHaptic(e) {
 }
 function onEyeCare(e) {
   settings.value = saveSettings({ eyeCare: e.detail.value })
+}
+
+// ===== 先学再看规则 =====
+const watchRules = ref(getWatchRules())
+// 开启锁定时改规则需验证密码（防孩子自己改）
+let watchPending = null
+
+function onWatchSwitch(e) {
+  const val = !!e.detail.value
+  if (kioskOn.value && cfg.value && cfg.value.pinHash) {
+    watchPending = { on: val }
+    unlockPurpose.value = 'watch'
+    overlay.value = 'unlock'
+    forgotMode.value = null
+    unlockPin.value = ''
+    unlockErr.value = ''
+    setTimeout(refreshKiosk, 0)
+    return
+  }
+  watchRules.value = saveWatchRules({ on: val })
+}
+
+function setWatch(field, val) {
+  if (kioskOn.value && cfg.value && cfg.value.pinHash) {
+    watchPending = { [field]: val }
+    unlockPurpose.value = 'watch'
+    overlay.value = 'unlock'
+    forgotMode.value = null
+    unlockPin.value = ''
+    unlockErr.value = ''
+    setTimeout(refreshKiosk, 0)
+    return
+  }
+  watchRules.value = saveWatchRules({ [field]: val })
+}
+
+function applyWatchPending() {
+  if (!watchPending) return
+  watchRules.value = saveWatchRules(watchPending)
+  watchPending = null
+  uni.showToast({ title: '已更新', icon: 'success' })
 }
 
 // ===== 专注锁定逻辑 =====
@@ -444,6 +549,9 @@ function applyUnlock() {
     })
   } else if (unlockPurpose.value === 'reset') {
     startSetup()
+  } else if (unlockPurpose.value === 'watch') {
+    applyWatchPending()
+    overlay.value = null
   } else {
     disableKiosk()
   }
@@ -709,5 +817,24 @@ function back() {
   text-align: center;
   font-size: 25rpx;
   color: #ff7a3d;
+}
+
+.mini-pills {
+  display: flex;
+  gap: 10rpx;
+}
+.mpill {
+  padding: 0 20rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 23rpx;
+  font-weight: 600;
+  color: #6d6157;
+  background: #f8f1e8;
+  border-radius: 100rpx;
+}
+.mpill.active {
+  background: #332c26;
+  color: #fff;
 }
 </style>

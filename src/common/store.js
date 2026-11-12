@@ -4,7 +4,10 @@ const K = {
   wrong: 'ss_wrong',
   history: 'ss_history',
   stats: 'ss_stats',
-  result: 'ss_last_result'
+  result: 'ss_last_result',
+  watchRules: 'ss_watch_rules',
+  watchState: 'ss_watch_state',
+  watchUnlock: 'ss_watch_unlock'
 }
 
 const DEFAULT_SETTINGS = {
@@ -147,6 +150,41 @@ export function saveResult(rec) {
 export function takeResult() {
   const r = read(K.result, null)
   return r
+}
+
+/* ---------------- 先学再看（答题解锁观看时间） ---------------- */
+const DEFAULT_WATCH_RULES = { on: false, minutes: 10, cap: 30, passAcc: 60 }
+
+export function getWatchRules() {
+  return Object.assign({}, DEFAULT_WATCH_RULES, read(K.watchRules, {}))
+}
+
+export function saveWatchRules(patch) {
+  const next = Object.assign(getWatchRules(), patch || {})
+  write(K.watchRules, next)
+  return next
+}
+
+// 今日已用观看分钟数（跨天自动清零）
+export function getWatchUsed() {
+  const s = read(K.watchState, null) || {}
+  if (s.date !== dayKey()) return 0
+  return s.used || 0
+}
+
+export function addWatchUsed(min) {
+  const used = getWatchUsed() + min
+  write(K.watchState, { date: dayKey(), used })
+  return used
+}
+
+// 当前解锁截止时间戳（0 = 未解锁）
+export function getUnlockUntil() {
+  return read(K.watchUnlock, 0) || 0
+}
+
+export function setUnlockUntil(ts) {
+  write(K.watchUnlock, ts)
 }
 
 /* ---------------- 清空 ---------------- */

@@ -167,7 +167,7 @@
         <view class="mark" v-if="feedback === 'wrong'">
           <text class="mark-icon">✕</text>
           <text class="mark-text">正确答案是 {{ current.answer }}</text>
-          <text class="mark-sub">没关系，下次努力！</text>
+          <text class="mark-sub">{{ current.tip || '没关系，下次努力！' }}</text>
         </view>
 
         <view class="next-btn" v-if="feedback && !settings.autoNext" @click="next">
@@ -196,6 +196,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
 import { stagePointGenerate } from '@/common/stages'
+import { openGenerate } from '@/common/openbank'
 import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
 import { sfx, speak, cheerRight, cheerWrong, CHEERS_STREAK } from '@/common/sound'
 
@@ -290,6 +291,8 @@ onLoad((q) => {
     list.value = stagePointGenerate(cfg.value.key, cfg.value.count, !!cfg.value.fun)
   } else if (cfg.value.source === 'lemiao' && cfg.value.key) {
     list.value = lemiaoGenerate(cfg.value.key, cfg.value.count)
+  } else if (cfg.value.source === 'open' && cfg.value.key) {
+    list.value = openGenerate(cfg.value.key, cfg.value.count)
   } else if (cfg.value.source === 'grade' && cfg.value.grade) {
     list.value = generateForGrade(cfg.value.grade, cfg.value.count)
   } else {
@@ -453,7 +456,7 @@ function finish() {
   tick = null
 
   const rec = {
-    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'point' ? `P_${cfg.value.key}${cfg.value.fun ? '_fun' : ''}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
+    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'open' ? `O_${cfg.value.key}` : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'point' ? `P_${cfg.value.key}${cfg.value.fun ? '_fun' : ''}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
     total: total.value,
     right: rightCount.value,
     durationMs: elapsed.value * 1000,

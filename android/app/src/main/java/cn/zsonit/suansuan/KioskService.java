@@ -22,7 +22,9 @@ public class KioskService extends AccessibilityService {
 
         SharedPreferences sp = getSharedPreferences("kiosk", MODE_PRIVATE);
         if (!sp.getBoolean("enabled", false)) return;
-        if (System.currentTimeMillis() < KioskPlugin.suspendUntil) return;
+        // 解锁期（先学再看）：静态暂停或持久化解锁期内不拉回
+        long pauseUntil = Math.max(KioskPlugin.suspendUntil, sp.getLong("unlock_until", 0L));
+        if (System.currentTimeMillis() < pauseUntil) return;
 
         CharSequence pkgCs = event.getPackageName();
         CharSequence clsCs = event.getClassName();

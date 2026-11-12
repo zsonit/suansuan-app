@@ -42,6 +42,14 @@
       </view>
     </view>
 
+    <view class="reward" v-if="reward">
+      <text class="reward-title">🎉 获得观看时间奖励</text>
+      <text class="reward-desc">{{ reward.desc }}</text>
+      <view class="reward-btn" v-if="reward.can" @click="claimReward">
+        去玩吧 · 解锁 {{ reward.minutes }} 分钟
+      </view>
+    </view>
+
     <view class="actions">
       <view class="btn primary" @click="again">再做一组</view>
       <view class="btn ghost" @click="goWrong" v-if="wrongs.length">看看错题本</view>
@@ -53,9 +61,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { takeResult, getSettings } from '@/common/store'
+import { takeResult, getSettings, getWatchRules, getWatchUsed, addWatchUsed, setUnlockUntil } from '@/common/store'
 import { fmtDuration, exprText } from '@/common/questions'
 import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
+import { isServiceOn, startUnlock } from '@/common/kiosk'
 
 const settings = ref(getSettings())
 const res = ref({ total: 0, right: 0, durationMs: 0, wrong: [], mode: 'add', difficulty: 1, count: 10 })
@@ -84,7 +93,7 @@ const grade = computed(() => {
   return { text: '别急，先把错题过一遍 🌱', cls: 'g-c' }
 })
 
-onLoad(() => {
+onLoad(async () => {
   settings.value = getSettings()
   const r = takeResult()
   if (r) res.value = Object.assign(res.value, r)
@@ -96,7 +105,45 @@ onLoad(() => {
     sfx('soft')
     speak(CHEERS_END[Math.floor(Math.random() * CHEERS_END.length)])
   }
+  await calcReward()
 })
+
+// ===== 先学再看：答题解锁观看时间 =====
+const reward = ref(null)
+
+async function calcReward() {
+  const rules = getWatchRules()
+  if (!rules.on) return
+  const remaining = Math.max(0, rules.cap - getWatchUsed())
+  if (remaining <= 0) {
+    reward.value = { can: false, minutes: 0, desc: '今天的观看时间已经用完啦，明天再来' }
+    return
+  }
+  if (acc.value < (rules.passAcc || 60)) {
+    reward.value = { can: false, minutes: 0, desc: `正确率到 ${rules.passAcc || 60}% 就能解锁 ${rules.minutes} 分钟，再练一组吧` }
+    return
+  }
+  const minutes = Math.min(rules.minutes, remaining)
+  reward.value = {
+    can: true,
+    minutes,
+    desc: remaining < rules.minutes ? `今天只剩 ${remaining} 分钟额度了，先玩 ${minutes} 分钟` : `答完一组奖励 ${minutes} 分钟，时间到会自动回来说「再做一组」`
+  }
+}
+
+async function claimReward() {
+  const minutes = reward.value && reward.value.minutes
+  if (!minutes) return
+  addWatchUsed(minutes)
+  setUnlockUntil(Date.now() + minutes * 60 * 1000)
+  const svcOn = await isServiceOn()
+  if (svcOn) {
+    // 暂停自动拉回并回桌面，时间到无障碍服务会把孩子带回练习
+    await startUnlock(minutes)
+  } else {
+    uni.showToast({ title: `解锁 ${minutes} 分钟（未开启锁定服务，仅计时）`, icon: 'none' })
+  }
+}
 
 function again() {
   const r = res.value
@@ -120,6 +167,12 @@ function again() {
     const pk = String(r.mode).slice(2).replace(/_fun$/, '')
     uni.redirectTo({
       url: `/pages/practice/index?source=point&key=${pk}&fun=${r.mode.endsWith('_fun') ? 1 : ''}&count=${r.count || 10}`
+    })
+    return
+  }
+  if (String(r.mode).startsWith('O_')) {
+    uni.redirectTo({
+      url: `/pages/practice/index?source=open&key=${String(r.mode).slice(2)}&count=${r.count || 10}`
     })
     return
   }
@@ -258,6 +311,41 @@ function goHome() {
 .avg-text {
   font-size: 24rpx;
   color: #a79c92;
+}
+
+.reward {
+  margin: 24rpx 40rpx 0;
+  background: linear-gradient(135deg, #e9fbf1, #d6f5e3);
+  border: 3rpx solid #bfe8cf;
+  border-radius: 32rpx;
+  padding: 30rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.reward-title {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #2e8b57;
+}
+.reward-desc {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  color: #4c8a68;
+  text-align: center;
+  line-height: 1.5;
+}
+.reward-btn {
+  margin-top: 22rpx;
+  padding: 0 60rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  background: linear-gradient(135deg, #34c98e, #2fbf87);
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 800;
+  border-radius: 100rpx;
+  box-shadow: 0 12rpx 28rpx rgba(47, 191, 135, 0.35);
 }
 
 .wrong-box {
