@@ -299,7 +299,7 @@ function startGrade() {
   min-height: 100vh;
   box-sizing: border-box;
   padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 24rpx);
-  padding-bottom: 220rpx;
+  padding-bottom: 340rpx;
   background: #fff9f0;
 }
 .page.eye {

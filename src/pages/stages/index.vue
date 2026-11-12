@@ -68,14 +68,11 @@ const stage = computed(() => STAGES.find((s) => s.key === cur.value))
 // 低段知识点显示「趣味互动」（配对玩法）
 const isLow = (p) => [7, 1, 2, 3].includes(p.g)
 
-const stageView = computed(() => {
-  if (!grade.value || grade.value === 7) return STAGES
-  return STAGES.filter((s) => s.grades.includes(grade.value) || s.grades.includes(7))
-})
+const stageView = computed(() => STAGES)
 
 function filterPoints(u) {
-  if (!grade.value || grade.value === 7) return u.points
-  return u.points.filter((p) => !p.g || p.g === grade.value || isLow(p))
+  // 学段闯关展示该学段全部知识点，不按年级过滤（进阶及以上学段与所选年级无关，过滤会导致空列表）
+  return u.points
 }
 
 onLoad((q) => {

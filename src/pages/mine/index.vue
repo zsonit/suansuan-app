@@ -4,11 +4,14 @@
       <text class="brand">我的</text>
     </view>
 
-    <view class="profile">
+    <view class="profile" @click="editNick">
       <view class="avatar">🐣</view>
       <view class="profile-info">
-        <text class="nick">{{ nick }}</text>
-        <text class="nick-sub">在算算星球练习第 {{ days }} 天</text>
+        <view class="nick-row">
+          <text class="nick">{{ nick }}</text>
+          <text class="nick-edit">✏️</text>
+        </view>
+        <text class="nick-sub">在算算星球练习第 {{ days }} 天 · 点名字可以改</text>
       </view>
     </view>
 
@@ -68,7 +71,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getStats, getToday, getStreak, getWrong, getSettings, getHistory } from '@/common/store'
+import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory } from '@/common/store'
 
 const stats = ref({ total: 0, right: 0, days: {} })
 const today = ref({ n: 0, right: 0 })
@@ -101,7 +104,30 @@ onShow(() => {
   wrongCount.value = getWrong().length
   settings.value = getSettings()
   days.value = Object.keys(stats.value.days || {}).length
+  nick.value = settings.value.nick || '小学员'
 })
+
+function editNick() {
+  uni.showModal({
+    title: '给自己起个名字',
+    editable: true,
+    placeholderText: '最多 12 个字，比如：小星星',
+    content: nick.value === '小学员' ? '' : nick.value,
+    confirmText: '保存',
+    cancelText: '取消',
+    success: (r) => {
+      if (!r.confirm) return
+      const v = (r.content || '').trim().slice(0, 12)
+      if (!v) {
+        uni.showToast({ title: '名字不能为空', icon: 'none' })
+        return
+      }
+      nick.value = v
+      saveSettings({ nick: v })
+      uni.showToast({ title: '改好啦 🎉', icon: 'none' })
+    }
+  })
+}
 
 function goWrong() {
   uni.switchTab({ url: '/pages/wrong/index' })
@@ -166,10 +192,18 @@ function about() {
   display: flex;
   flex-direction: column;
 }
+.nick-row {
+  display: flex;
+  align-items: center;
+}
 .nick {
   font-size: 36rpx;
   font-weight: 800;
   color: #332c26;
+}
+.nick-edit {
+  font-size: 24rpx;
+  margin-left: 12rpx;
 }
 .nick-sub {
   margin-top: 10rpx;
