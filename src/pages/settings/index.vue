@@ -102,7 +102,7 @@
       <view class="sheet">
         <!-- ====== 设置流程 ====== -->
         <template v-if="overlay === 'setup'">
-          <text class="sheet-title">{{ setupStep === 4 ? '记下恢复码' : kioskOn ? '修改锁定密码' : '开启专注锁定' }}</text>
+          <text class="sheet-title">{{ kioskOn ? '修改锁定密码' : '开启专注锁定' }}</text>
 
           <template v-if="setupStep === 1">
             <text class="sheet-desc">设置一个 6 位数字的锁定密码</text>
@@ -122,8 +122,8 @@
             </view>
           </template>
 
-          <template v-else-if="setupStep === 3">
-            <text class="sheet-desc">选一个安全问题（忘记密码时用来找回）</text>
+          <template v-else>
+            <text class="sheet-desc">设置找回方式（忘记密码时用）：</text>
             <view class="q-list">
               <view
                 v-for="q in QUESTIONS"
@@ -135,19 +135,12 @@
                 {{ q }}
               </view>
             </view>
-            <input class="pin-input" v-model="secA" placeholder="答案" />
+            <input class="pin-input" v-model="secA" placeholder="安全问题答案" />
+            <input class="pin-input" type="number" maxlength="11" v-model="phoneIn" placeholder="自己的手机号（11 位，用于找回）" />
+            <text class="err" v-if="setupErr">{{ setupErr }}</text>
             <view class="sheet-btns">
               <view class="sbtn ghost" @click="setupStep = 2">上一步</view>
-              <view class="sbtn" @click="setupNext">生成恢复码</view>
-            </view>
-          </template>
-
-          <template v-else>
-            <text class="sheet-desc">如果忘记密码，只能凭这个恢复码找回，请截图保存到相册或抄在纸上：</text>
-            <text class="recovery">{{ recovery }}</text>
-            <view class="sheet-btns">
-              <view class="sbtn ghost" @click="setupStep = 3">重新生成</view>
-              <view class="sbtn" @click="finishSetup">我已保存，确认开启</view>
+              <view class="sbtn" @click="setupNext">确认开启</view>
             </view>
           </template>
         </template>
@@ -170,15 +163,15 @@
           <template v-else-if="forgotMode === 'choose'">
             <text class="sheet-desc">选择找回方式</text>
             <view class="sheet-btns col">
-              <view class="sbtn" @click="forgotMode = 'recovery'">用恢复码找回</view>
+              <view class="sbtn" @click="forgotMode = 'recovery'">用手机号找回</view>
               <view class="sbtn" @click="forgotMode = 'answer'">回答安全问题</view>
             </view>
             <view class="link" @click="forgotMode = null">返回输密码</view>
           </template>
 
           <template v-else-if="forgotMode === 'recovery'">
-            <text class="sheet-desc">输入开启时保存的恢复码（SS-xxxx-xxxx）</text>
-            <input class="pin-input" v-model="recoveryIn" placeholder="SS-1234-5678" />
+            <text class="sheet-desc">输入开启锁定时设置的手机号</text>
+            <input class="pin-input" type="number" maxlength="11" v-model="recoveryIn" placeholder="手机号码" />
             <text class="err" v-if="unlockErr">{{ unlockErr }}</text>
             <view class="sheet-btns">
               <view class="sbtn ghost" @click="forgotMode = 'choose'">返回</view>
@@ -216,7 +209,7 @@ import { getSettings, saveSettings, clearAll } from '@/common/store'
 import { sfx, speak } from '@/common/sound'
 import {
   QUESTIONS, getConfig, saveConfig, setEnabled, isEnabled, isServiceOn,
-  openAccessibilitySettings, verifyPin, verifyAnswer, recoveryCode,
+  openAccessibilitySettings, verifyPin, verifyAnswer, verifyPhone,
   sha256, lockoutLeft, addWrongAttempt, resetAttempts
 } from '@/common/kiosk'
 
@@ -230,11 +223,12 @@ const serviceOn = ref(false)
 const cfg = ref(null)
 const overlay = ref(null) // null | 'setup' | 'unlock'
 const setupStep = ref(1)
+const setupErr = ref('')
 const pin1 = ref('')
 const pin2 = ref('')
 const secQ = ref(QUESTIONS[0])
 const secA = ref('')
-const recovery = ref('')
+const phoneIn = ref('')
 const unlockPurpose = ref('disable') // enable | disable | reset
 const unlockPin = ref('')
 const unlockErr = ref('')
@@ -306,11 +300,12 @@ async function onKiosk(e) {
 function startSetup() {
   overlay.value = 'setup'
   setupStep.value = 1
+  setupErr.value = ''
   pin1.value = ''
   pin2.value = ''
   secQ.value = QUESTIONS[0]
   secA.value = ''
-  recovery.value = ''
+  phoneIn.value = ''
 }
 
 async function setupNext() {
@@ -330,14 +325,17 @@ async function setupNext() {
     setupStep.value = 3
     return
   }
-  if (setupStep.value === 3) {
-    if (!secA.value.trim()) {
-      uni.showToast({ title: '请填写安全问题答案', icon: 'none' })
-      return
-    }
-    recovery.value = recoveryCode()
-    setupStep.value = 4
+  // 第 3 步：安全问题 + 手机号
+  if (!secA.value.trim()) {
+    setupErr.value = '请填写安全问题答案'
+    return
   }
+  if (!/^1\d{10}$/.test(phoneIn.value.replace(/\D/g, ''))) {
+    setupErr.value = '请输入 11 位手机号码'
+    return
+  }
+  setupErr.value = ''
+  finishSetup()
 }
 
 async function finishSetup() {
@@ -348,7 +346,7 @@ async function finishSetup() {
     pinHash: await sha256(salt + ':' + pin1.value),
     question: secQ.value,
     ansHash: await sha256(salt + ':a:' + secA.value.trim().toLowerCase()),
-    recovery: recovery.value
+    phoneHash: await sha256(salt + ':p:' + phoneIn.value.replace(/\D/g, ''))
   }
   await saveConfig(newCfg)
   cfg.value = newCfg
@@ -414,10 +412,8 @@ async function submitUnlock() {
 
 async function submitRecovery() {
   const c = cfg.value
-  const inCode = (recoveryIn.value || '').trim().toUpperCase()
-  if (!c || !inCode) return
-  if (inCode !== String(c.recovery || '').toUpperCase()) {
-    unlockErr.value = '恢复码不对'
+  if (!c || !(await verifyPhone(c, recoveryIn.value))) {
+    unlockErr.value = '手机号不对'
     recoveryIn.value = ''
     return
   }
@@ -707,18 +703,6 @@ function back() {
   border-color: #ff7a3d;
   color: #332c26;
   font-weight: 600;
-}
-.recovery {
-  font-size: 48rpx;
-  font-weight: 800;
-  letter-spacing: 4rpx;
-  color: #ff7a3d;
-  background: #fff6ee;
-  border: 3rpx dashed #ffb27a;
-  border-radius: 24rpx;
-  padding: 30rpx;
-  text-align: center;
-  margin-bottom: 28rpx;
 }
 .link {
   margin-top: 20rpx;

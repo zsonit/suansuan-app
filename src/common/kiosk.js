@@ -87,9 +87,19 @@ export async function verifyAnswer(cfg, answer) {
   return (await sha256(cfg.salt + ':a:' + norm)) === cfg.ansHash
 }
 
-// 恢复码：SS- 开头前缀 + 8 位数字，格式 SS-1234-5678
+// 找回凭证：手机号（用户自己设置），hash 后存 cfg.phoneHash
+// 兼容旧版随机恢复码（cfg.recovery）
 export function recoveryCode() {
   return 'SS-' + randCode()
+}
+
+export async function verifyPhone(cfg, phone) {
+  if (!cfg || !phone) return false
+  const p = String(phone).replace(/\D/g, '')
+  if (cfg.phoneHash && (await sha256(cfg.salt + ':p:' + p)) === cfg.phoneHash) return true
+  // 旧版配置：随机恢复码
+  if (cfg.recovery && ('SS-' + p === String(cfg.recovery).toUpperCase() || p === String(cfg.recovery).replace(/\D/g, ''))) return true
+  return false
 }
 
 // 防暴力试错：连错 5 次锁 5 分钟
