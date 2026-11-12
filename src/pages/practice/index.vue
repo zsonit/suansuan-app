@@ -409,6 +409,32 @@ function isCorrect(q, raw) {
   return Number(raw) === q.answer
 }
 
+// 错一题自动追加同类新题（巩固练习），返回 n 道；生成不出新题时回退当前题
+function makeSimilar(n) {
+  const src = cfg.value
+  let more = []
+  if (src.source === 'point' && src.key) {
+    more = stagePointGenerate(src.key, n + 3, !!src.fun)
+  } else if (src.source === 'lemiao' && src.key) {
+    more = lemiaoGenerate(src.key, n + 3)
+  } else if (src.source === 'open' && src.key) {
+    more = openGenerate(src.key, n + 3)
+  } else if (src.source === 'grade' && src.grade) {
+    more = generateForGrade(src.grade, n + 3)
+  } else if (src.source !== 'wrong') {
+    more = generate(src.mode, src.difficulty, n + 3)
+  }
+  // 去掉与本次练习已出现过的重复题干
+  const seen = new Set(list.value.map((x) => String(x.text)))
+  more = more.filter((x) => !seen.has(String(x.text)))
+  if (more.length < n && src.source === 'wrong') {
+    more = more.concat([{ ...current.value }])
+  }
+  return more.slice(0, n)
+}
+
+const APPEND_LIMIT = 60
+
 function settle(my) {
   const q = current.value
   const ok = isCorrect(q, my)
@@ -432,6 +458,11 @@ function settle(my) {
     buzz(true)
     sfx('wrong')
     cheerWrong()
+    // 错一题自动追加 2 道同类新题（总数跟着增加，防止一次性刷完就跑）
+    if (list.value.length < APPEND_LIMIT) {
+      const extra = makeSimilar(2)
+      if (extra.length) list.value = list.value.concat(extra)
+    }
   }
 
   // 自动跳题：开启时按答题速度给不同停顿；关闭时等孩子自己点「继续」
