@@ -8,7 +8,7 @@
       <text class="sub">今天已练 {{ today.n }} 题 · 答对 {{ today.right }} 题</text>
     </view>
 
-    <view class="body">
+    <scroll-view scroll-y class="body" :show-scrollbar="false">
       <view class="hero" @click="startGrade">
         <view class="hero-deco">✨</view>
         <text class="hero-title">{{ gradeSel ? gradeName + '综合练习' : '今天想练点什么？' }}</text>
@@ -132,7 +132,7 @@
           {{ c }} 题
         </view>
       </view>
-    </view>
+    </scroll-view>
 
     <view class="footer">
       <view class="start" @click="start">
@@ -296,11 +296,13 @@ function startGrade() {
 
 <style scoped>
 .page {
-  min-height: 100vh;
+  height: 100vh;
   box-sizing: border-box;
   padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 24rpx);
-  padding-bottom: 340rpx;
   background: #fff9f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .page.eye {
   background: #ffeecb;
@@ -336,6 +338,8 @@ function startGrade() {
 }
 
 .body {
+  flex: 1;
+  min-height: 0;
   padding: 0 40rpx;
 }
 
@@ -560,11 +564,8 @@ function startGrade() {
 }
 
 .footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--window-bottom) + 24rpx);
-  padding: 0 40rpx;
+  padding: 16rpx 40rpx calc(16rpx + var(--window-bottom, 0px));
+  background: #fff9f0;
 }
 .start {
   background: linear-gradient(135deg, #ff9a5c 0%, #ff7a3d 100%);
