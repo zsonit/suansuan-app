@@ -8,8 +8,29 @@
       <text class="sub">今天已练 {{ today.n }} 题 · 答对 {{ today.right }} 题</text>
     </view>
 
-    <view class="unlock-banner" v-if="unlockLeftMin > 0">
-      🍿 自由时间还剩 {{ unlockLeftMin }} 分钟，到时自动回来练习
+    <view class="watch-card" v-if="watchOn">
+      <view class="watch-live" v-if="unlockLeftMin > 0">
+        <text class="watch-live-icon">🍿</text>
+        <view class="watch-live-main">
+          <text class="watch-live-title">自由时间</text>
+          <text class="watch-live-left">还剩 {{ unlockLeftMin }} 分钟</text>
+        </view>
+        <text class="watch-live-pct">{{ watchUsed }}/{{ watchCap }} 分</text>
+      </view>
+      <view class="watch-stats">
+        <view class="watch-cell">
+          <text class="watch-num">{{ watchUsed }}</text>
+          <text class="watch-label">今日已解锁(分钟)</text>
+        </view>
+        <view class="watch-cell">
+          <text class="watch-num">{{ watchLeft }}</text>
+          <text class="watch-label">还能看(分钟)</text>
+        </view>
+        <view class="watch-cell">
+          <text class="watch-num">{{ watchCap }}</text>
+          <text class="watch-label">每日上限(分钟)</text>
+        </view>
+      </view>
     </view>
 
     <scroll-view scroll-y class="body" :show-scrollbar="false">
@@ -172,7 +193,7 @@ import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, getToday, getStreak, getUnlockUntil } from '@/common/store'
+import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed } from '@/common/store'
 
 const gradeSel = ref(1)
 const mode = ref('add')
@@ -299,7 +320,20 @@ onShow(() => {
   today.value = getToday()
   streak.value = getStreak()
   refreshUnlock()
+  refreshWatch()
 })
+
+// 先学再看：观看时间卡（今日已解锁 / 还能看 / 每日上限）
+const watchOn = ref(false)
+const watchUsed = ref(0)
+const watchCap = ref(0)
+const watchLeft = computed(() => Math.max(0, watchCap.value - watchUsed.value))
+function refreshWatch() {
+  const r = getWatchRules()
+  watchOn.value = !!r.on
+  watchCap.value = r.cap || 0
+  watchUsed.value = getWatchUsed()
+}
 
 // 自由时间倒计时横幅
 const now = ref(Date.now())
@@ -398,15 +432,65 @@ function startGrade() {
   color: #a79c92;
 }
 
-.unlock-banner {
+.watch-card {
   margin: 16rpx 40rpx 0;
-  padding: 16rpx 24rpx;
-  background: #e8f7ee;
+  background: linear-gradient(135deg, #eafaf1, #ddf3e7);
   border: 3rpx solid #bfe8cf;
-  border-radius: 20rpx;
-  font-size: 24rpx;
+  border-radius: 24rpx;
+  padding: 20rpx 24rpx;
+}
+.watch-live {
+  display: flex;
+  align-items: center;
+  padding-bottom: 16rpx;
+  border-bottom: 2rpx dashed #bfe8cf;
+  margin-bottom: 16rpx;
+}
+.watch-live-icon {
+  font-size: 44rpx;
+  margin-right: 16rpx;
+}
+.watch-live-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.watch-live-title {
+  font-size: 26rpx;
+  font-weight: 800;
   color: #2e8b57;
-  font-weight: 600;
+}
+.watch-live-left {
+  margin-top: 4rpx;
+  font-size: 24rpx;
+  color: #4c8a68;
+}
+.watch-live-pct {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #2e8b57;
+  background: #fff;
+  border-radius: 100rpx;
+  padding: 8rpx 18rpx;
+}
+.watch-stats {
+  display: flex;
+}
+.watch-cell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.watch-num {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #2e8b57;
+}
+.watch-label {
+  margin-top: 4rpx;
+  font-size: 20rpx;
+  color: #6fa98a;
 }
 
 .body {
