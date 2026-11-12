@@ -68,6 +68,23 @@
     </view>
 
     <text class="foot">数据只保存在这台设备上 · v1.0.0</text>
+
+    <!-- 家长门禁：设过锁定密码后需验证才能进 -->
+    <view class="gate" v-if="gated">
+      <text class="gate-icon">🔒</text>
+      <text class="gate-title">家长验证</text>
+      <text class="gate-desc">请输入锁定密码进入「我的」</text>
+      <input
+        class="gate-input"
+        type="number"
+        :password="true"
+        maxlength="6"
+        v-model="gatePin"
+        placeholder="6 位数字密码"
+      />
+      <text class="gate-err" v-if="gateErr">{{ gateErr }}</text>
+      <view class="gate-btn" @click="gateSubmit">解锁</view>
+    </view>
   </view>
 </template>
 
@@ -75,6 +92,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory, getWatchRules, getWatchUsed } from '@/common/store'
+import { getConfig, verifyPin, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts } from '@/common/kiosk'
 
 const stats = ref({ total: 0, right: 0, days: {} })
 const today = ref({ n: 0, right: 0 })
@@ -106,7 +124,54 @@ const watchUsed = ref(0)
 const watchCap = ref(0)
 const watchLeft = ref(0)
 
-onShow(() => {
+// ===== 家长门禁 =====
+const gated = ref(false)
+const gatePin = ref('')
+const gateErr = ref('')
+let gateBusy = false
+
+async function gateSubmit() {
+  if (gateBusy) return
+  const left = lockoutLeft()
+  if (left > 0) {
+    gateErr.value = `错太多次了，${Math.ceil(left / 1000)} 秒后再试`
+    return
+  }
+  gateBusy = true
+  try {
+    const cfg = await getConfig()
+    if (await verifyPin(cfg, gatePin.value)) {
+      gatePass()
+      resetAttempts()
+      gated.value = false
+      gatePin.value = ''
+      gateErr.value = ''
+      // 门开后再拉一次数据
+      stats.value = getStats()
+      today.value = getToday()
+      streak.value = getStreak()
+      wrongCount.value = getWrong().length
+      settings.value = getSettings()
+      nick.value = settings.value.nick || '小学员'
+    } else {
+      addWrongAttempt()
+      const l2 = lockoutLeft()
+      gateErr.value = l2 > 0 ? '连错 5 次，锁定 5 分钟' : '密码不对，再想想'
+      gatePin.value = ''
+    }
+  } finally {
+    gateBusy = false
+  }
+}
+
+onShow(async () => {
+  const need = await gateNeeded()
+  gated.value = need && !gateOpen()
+  if (gated.value) {
+    gatePin.value = ''
+    gateErr.value = ''
+    return
+  }
   stats.value = getStats()
   today.value = getToday()
   streak.value = getStreak()
@@ -148,6 +213,7 @@ function goWrong() {
 }
 
 function goSettings() {
+  if (gated.value) return
   uni.navigateTo({ url: '/pages/settings/index' })
 }
 
@@ -346,5 +412,67 @@ function about() {
   margin-top: 40rpx;
   font-size: 21rpx;
   color: #c0b3a6;
+}
+
+/* ===== 家长门禁遮罩 ===== */
+.gate {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 999;
+  background: #fff9f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 80rpx;
+}
+.gate-icon {
+  font-size: 90rpx;
+}
+.gate-title {
+  margin-top: 20rpx;
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #4a3f35;
+}
+.gate-desc {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #a79c92;
+}
+.gate-input {
+  margin-top: 40rpx;
+  width: 100%;
+  box-sizing: border-box;
+  height: 96rpx;
+  background: #fff;
+  border: 3rpx solid #eadfce;
+  border-radius: 24rpx;
+  text-align: center;
+  font-size: 40rpx;
+  letter-spacing: 12rpx;
+  font-weight: 700;
+  color: #4a3f35;
+}
+.gate-err {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: #e05a4e;
+}
+.gate-btn {
+  margin-top: 36rpx;
+  width: 100%;
+  height: 92rpx;
+  line-height: 92rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #ff9a5c 0%, #ff7a3d 100%);
+  color: #fff;
+  font-size: 32rpx;
+  font-weight: 800;
+  border-radius: 100rpx;
+  box-shadow: 0 12rpx 28rpx rgba(255, 122, 61, 0.3);
 }
 </style>

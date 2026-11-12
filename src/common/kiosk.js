@@ -135,3 +135,18 @@ export function addWrongAttempt() {
 export function resetAttempts() {
   uni.setStorageSync(LOCK_KEY + '_n', 0)
 }
+
+/* ---------------- 家长门禁 ----------------
+   设置过锁定密码后，进「我的」/「练习设置」要先输密码；
+   同一次 App 会话内验证一次即放行，App 重启后重新上锁 */
+let gateOk = false
+export function gateOpen() {
+  return gateOk
+}
+export function gatePass() {
+  gateOk = true
+}
+export async function gateNeeded() {
+  const c = await getConfig()
+  return !!(c && c.pinHash)
+}
