@@ -340,6 +340,9 @@ function startGrade() {
 .body {
   flex: 1;
   min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 0 40rpx;
 }
 
