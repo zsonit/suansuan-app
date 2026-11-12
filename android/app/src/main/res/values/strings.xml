@@ -4,4 +4,5 @@
     <string name="title_activity_main">算算星球</string>
     <string name="package_name">cn.zsonit.suansuan</string>
     <string name="custom_url_scheme">cn.zsonit.suansuan</string>
+    <string name="kiosk_desc">开启后，退出算算星球时会自动回到练习界面（家长控制/专注锁定）</string>
 </resources>
