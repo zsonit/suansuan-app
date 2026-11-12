@@ -13,7 +13,7 @@
         <view class="hero-deco">✨</view>
         <text class="hero-title">{{ gradeSel ? gradeName + '综合练习' : '今天想练点什么？' }}</text>
         <text class="hero-sub" v-if="gradeSel">点这里一键开练，题型难度都按 {{ gradeName }} 课标来</text>
-        <text class="hero-sub" v-else>选好模式和难度，点下面的按钮就开始</text>
+        <text class="hero-sub" v-else>点卡片就能直接开始练习</text>
         <view class="goal">
           <view class="goal-bar">
             <view class="goal-fill" :style="{ width: goalPct + '%' }"></view>
@@ -133,21 +133,13 @@
         </view>
       </view>
     </scroll-view>
-
-    <view class="footer">
-      <view class="start" @click="start">
-        <text class="start-text">开始练习</text>
-        <text class="start-sub" v-if="isLang">{{ modeName(mode) }} · {{ count }} 题</text>
-        <text class="start-sub" v-else>{{ modeName(mode) }} · {{ levelName }} · {{ count }} 题</text>
-      </view>
-    </view>
   </view>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { GROUPS, GRADES, LEVELS, COUNTS, modeName, modeOf } from '@/common/questions'
+import { GROUPS, GRADES, LEVELS, COUNTS, modeOf } from '@/common/questions'
 import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { sfx } from '@/common/sound'
@@ -253,7 +245,6 @@ const gradeName = computed(() => {
   const g = GRADES.find((x) => x.key === gradeSel.value)
   return g ? g.name : ''
 })
-const levelName = computed(() => (LEVELS.find((l) => l.key === difficulty.value) || LEVELS[0]).name)
 const goalPct = computed(() => {
   const goal = settings.value.dailyGoal || 20
   return Math.min(100, Math.round((today.value.n / goal) * 100))
@@ -343,7 +334,7 @@ function startGrade() {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0 40rpx;
+  padding: 0 40rpx 40rpx;
 }
 
 .hero {
@@ -566,28 +557,4 @@ function startGrade() {
   color: #fff;
 }
 
-.footer {
-  padding: 16rpx 40rpx calc(16rpx + var(--window-bottom, 0px));
-  background: #fff9f0;
-}
-.start {
-  background: linear-gradient(135deg, #ff9a5c 0%, #ff7a3d 100%);
-  border-radius: 32rpx;
-  padding: 24rpx 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-shadow: 0 16rpx 34rpx rgba(255, 122, 61, 0.34);
-}
-.start-text {
-  font-size: 36rpx;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: 4rpx;
-}
-.start-sub {
-  margin-top: 6rpx;
-  font-size: 21rpx;
-  color: rgba(255, 255, 255, 0.85);
-}
 </style>
