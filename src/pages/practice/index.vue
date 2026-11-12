@@ -13,7 +13,7 @@
       <view class="progress-fill" :style="{ width: progressPct + '%' }"></view>
     </view>
 
-    <view class="stage">
+    <view class="stage" :class="{ lift: qType !== 'input' && qType !== 'frac' }">
       <view class="card" :class="feedback">
         <!-- 图形化说题：十格框 / 骰子 / 物件图 -->
         <view class="qvisual" v-if="current.visual">
@@ -568,6 +568,10 @@ function quit() {
   align-items: center;
   justify-content: center;
   padding: 0 36rpx;
+}
+/* 选择/判断/比较题没有键盘，题卡整体上移一点，避免偏下 */
+.stage.lift {
+  padding-bottom: 14vh;
 }
 
 .card {
