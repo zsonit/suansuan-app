@@ -81,16 +81,28 @@
         </view>
       </view>
 
-      <view class="sec-title">年级</view>
+      <view class="sec-title">
+        年级
+        <text class="lock-chip" v-if="gradeLocked">🔒 家长设定</text>
+      </view>
+      <view class="grade-lock" v-if="gradeLocked">
+        <text class="gl-main">只能做{{ gradeName || '全部年级' }}的题</text>
+        <text class="gl-sub" v-if="gradeNextUp">📅 {{ gradeNextUp.slice(0, 4) }} 年 9 月 1 日自动升一级</text>
+        <text class="gl-sub" v-else>想换年级，请让爸爸妈妈在家长端修改</text>
+      </view>
       <view class="grade-pills">
-        <view class="gpill" :class="{ active: gradeSel === 0 }" @click="selectGrade(0)">
+        <view
+          class="gpill"
+          :class="{ active: gradeSel === 0, locked: gradeLocked && gradeSel !== 0 }"
+          @click="selectGrade(0)"
+        >
           全部
         </view>
         <view
           v-for="g in GRADES"
           :key="g.key"
           class="gpill"
-          :class="{ active: gradeSel === g.key }"
+          :class="{ active: gradeSel === g.key, locked: gradeLocked && gradeSel !== g.key }"
           @click="selectGrade(g.key)"
         >
           {{ g.emoji }} {{ g.name }}
@@ -210,13 +222,18 @@ import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, saveSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone } from '@/common/store'
+import { getSettings, saveSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone, getGradeInfo, getActiveGrade } from '@/common/store'
 
 const gradeSel = ref(1)
-// 家长远程设置的年级（设置里持久化过的话，启动时恢复）
+// 家长设定年级：锁定后孩子只能做该年级的题，且每学年 9 月 1 日自动升一级
+const gradeLocked = ref(false)
+const gradeNextUp = ref('')
 {
-  const savedGrade = getSettings().grade
-  if (savedGrade !== undefined && savedGrade !== null) gradeSel.value = Number(savedGrade) || 1
+  const gi = getGradeInfo()
+  gradeLocked.value = gi.locked
+  gradeNextUp.value = gi.nextUpAt
+  gradeSel.value = getActiveGrade()
+  if (gradeSel.value === undefined || gradeSel.value === null) gradeSel.value = 1
 }
 const mode = ref('add')
 const difficulty = ref(1)
@@ -316,6 +333,15 @@ function selectMode(m) {
 }
 
 function selectGrade(k) {
+  if (gradeLocked.value) {
+    uni.showModal({
+      title: '年级由家长设定',
+      content: `现在是${gradeName.value || '全部年级'}。想换年级，请让爸爸妈妈在手机上的「算算星球家长」里修改。`,
+      showCancel: false,
+      confirmText: '知道了'
+    })
+    return
+  }
   gradeSel.value = k
   saveSettings({ grade: k })
   // 切年级后当前模式若不在该年级，选该年级第一个模式
@@ -342,6 +368,15 @@ onShow(() => {
   settings.value = getSettings()
   today.value = getToday()
   streak.value = getStreak()
+  // 家长端可能刚改过年级（或到了 9 月 1 日自动升级），回前台以家长设定为准
+  const gi = getGradeInfo()
+  gradeLocked.value = gi.locked
+  gradeNextUp.value = gi.nextUpAt
+  if (gi.locked && gradeSel.value !== gi.grade) {
+    gradeSel.value = gi.grade
+    const all = viewGroups.value.flatMap((g) => g.modes)
+    if (!all.find((m) => m.key === mode.value) && all[0]) applyMode(all[0])
+  }
   refreshUnlock()
   refreshWatch()
 })
@@ -765,6 +800,41 @@ function startGrade() {
 .grade-pills {
   display: flex;
   flex-wrap: wrap;
+}
+/* 家长设定年级：锁定提示 + 其他年级变灰不可点 */
+.lock-chip {
+  margin-left: 14rpx;
+  font-size: 21rpx;
+  font-weight: 600;
+  color: #b07a4e;
+  background: #fff2e6;
+  border-radius: 100rpx;
+  padding: 6rpx 16rpx;
+}
+.grade-lock {
+  background: #fff7ef;
+  border: 1rpx solid #f7e6d3;
+  border-radius: 22rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+.gl-main {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #a2622c;
+  line-height: 1.5;
+}
+.gl-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #b8967a;
+  margin-top: 6rpx;
+  line-height: 1.5;
+}
+.gpill.locked {
+  opacity: 0.4;
+  box-shadow: none;
 }
 .gpill {
   margin: 0 16rpx 16rpx 0;

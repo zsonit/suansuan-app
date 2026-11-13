@@ -4,7 +4,8 @@
 import { createWorkBuddyCloud } from '@tencent-ai/workbuddy-cloud-sdk'
 import {
   getWatchRules, saveWatchRules, getWatchUsed, getWatchEarned, watchAvailable,
-  getDailyProgress, getChallengeDone, setUnlockUntil, saveSettings, getSettings
+  getDailyProgress, getChallengeDone, setUnlockUntil, saveSettings, getSettings,
+  getGradeInfo, setGradeByParent, allowChildGrade
 } from '@/common/store'
 
 const cloud = createWorkBuddyCloud({
@@ -97,13 +98,18 @@ export function stop() {
 
 /* ---------------- 孩子端：轮询指令 + 心跳 ---------------- */
 function snapState() {
+  const gi = getGradeInfo()
   return {
     watchUsed: getWatchUsed(),
     watchEarned: getWatchEarned(),
     avail: watchAvailable(),
     dailyDone: getDailyProgress().done,
     chalDone: getChallengeDone(),
-    grade: (getSettings().grade === undefined || getSettings().grade === null) ? 1 : getSettings().grade,
+    grade: gi.grade,
+    gradeLocked: gi.locked,
+    gradeBase: gi.base,
+    gradeSince: gi.since,
+    gradeNextUp: gi.nextUpAt,
     rules: getWatchRules()
   }
 }
@@ -179,11 +185,16 @@ async function execCommand(c) {
     }
     case 'set_grade': {
       const g = Number(p.grade)
-      if (g >= 0 && g <= 6) {
-        saveSettings({ grade: g })
-        return { grade: g }
+      if (!(g >= 0 && g <= 6)) return { noop: true }
+      if (p.lock === false) {
+        // 家长放权：孩子可在设备上自选年级
+        saveSettings({ grade: g, gradeBase: g })
+        allowChildGrade()
+      } else {
+        // 家长设定：锁定年级，孩子端只能做该年级的题；9 月 1 日自动升一级
+        setGradeByParent(g)
       }
-      return { noop: true }
+      return { grade: getGradeInfo() }
     }
     case 'msg': {
       const text = String(p.text || '').slice(0, 200)

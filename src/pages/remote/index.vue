@@ -79,6 +79,10 @@
           <view class="pill" :class="{ active: d.rules.chalQ === 30 }" @click="setRule(d, 'chalQ', 30)">挑战30题</view>
         </view>
         <view class="rule-pills">
+          <view class="pill" :class="{ active: d.gradeLocked === true }" @click="setGrade(d, d.grade, true)">锁定年级</view>
+          <view class="pill" :class="{ active: d.gradeLocked === false }" @click="setGrade(d, d.grade, false)">允许孩子自选</view>
+        </view>
+        <view class="rule-pills">
           <view class="pill" :class="{ active: d.grade === 0 }" @click="setGrade(d, 0)">全年级</view>
           <view
             v-for="g in GRADES"
@@ -90,6 +94,10 @@
             {{ g.name }}
           </view>
         </view>
+        <text class="bind-tip" v-if="d.gradeLocked">
+          孩子端只能做{{ gradeName(d.grade) }}的题，每年 9 月 1 日自动升一级{{ d.gradeNextUp ? '（下次 ' + d.gradeNextUp + '）' : '' }}
+        </text>
+        <text class="bind-tip" v-else>当前允许孩子在设备上自己选年级</text>
         <text class="bind-tip">修改后孩子设备 6 秒内自动生效</text>
       </view>
     </view>
@@ -144,6 +152,8 @@ async function loadDevices() {
         showRules: old.showRules || false,
         rules: old.rules || null,
         grade: old.grade,
+        gradeLocked: old.gradeLocked,
+        gradeNextUp: old.gradeNextUp || '',
         info: old.info || null,
         reports: old.reports || []
       }
@@ -155,6 +165,8 @@ async function loadDevices() {
           dev.online = info.online
           if (info.state) {
             dev.grade = info.state.grade
+            dev.gradeLocked = !!info.state.gradeLocked
+            dev.gradeNextUp = info.state.gradeNextUp || ''
             if (info.state.rules) dev.rules = info.state.rules
           }
         }
@@ -254,15 +266,25 @@ async function setRule(d, key, value) {
   }
 }
 
-async function setGrade(d, g) {
+async function setGrade(d, g, lock) {
   sfx('tap')
-  d.grade = g
+  const target = Number(g) || 0
+  const lockVal = lock === undefined ? true : !!lock
+  d.grade = target
+  d.gradeLocked = lockVal
   try {
-    await parentSend(d.code, 'set_grade', { grade: g })
-    toast('年级已更新')
+    await parentSend(d.code, 'set_grade', { grade: target, lock: lockVal })
+    toast(lockVal ? '年级已锁定并更新' : '已允许孩子自选年级')
   } catch (e) {
     toast(e.message || '发送失败')
   }
+}
+
+function gradeName(g) {
+  const n = Number(g) || 0
+  if (!n) return '全部年级'
+  const it = GRADES.find((x) => x.key === n)
+  return it ? it.name : n + ' 年级'
 }
 
 function acc(r) {

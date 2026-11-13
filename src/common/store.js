@@ -55,6 +55,87 @@ export function saveSettings(patch) {
   return next
 }
 
+/* ---------------- 年级：家长设定 + 每学年自动升级 ---------------- */
+// 规则：家长在家长端选定年级后写 gradeLocked=true，孩子端只能做该年级的题；
+// 之后每逢 9 月 1 日（新学年）自动 +1 级，六年级封顶。
+// 家长随时可改（改的当天重新计时，从而 9 月 1 日再自动升级）。
+
+function gradeStepsSince(since) {
+  if (!since) return 0
+  const s = new Date(String(since).slice(0, 10) + 'T00:00:00')
+  if (isNaN(s.getTime())) return 0
+  const now = new Date()
+  // 设定日之后的第一个 9 月 1 日为新学年起点
+  let edge = new Date(s.getFullYear(), 8, 1, 0, 0, 0)
+  if (s >= edge) edge = new Date(s.getFullYear() + 1, 8, 1, 0, 0, 0)
+  let n = 0
+  while (edge.getTime() <= now.getTime() && n < 20) {
+    n++
+    edge = new Date(edge.getFullYear() + 1, 8, 1, 0, 0, 0)
+  }
+  return n
+}
+
+function nextGradeUpAt(since) {
+  if (!since) return ''
+  const s = new Date(String(since).slice(0, 10) + 'T00:00:00')
+  if (isNaN(s.getTime())) return ''
+  const now = new Date()
+  let edge = new Date(s.getFullYear(), 8, 1, 0, 0, 0)
+  if (s >= edge) edge = new Date(s.getFullYear() + 1, 8, 1, 0, 0, 0)
+  while (edge.getTime() <= now.getTime()) {
+    edge = new Date(edge.getFullYear() + 1, 8, 1, 0, 0, 0)
+  }
+  const y = edge.getFullYear()
+  return `${y}-09-01`
+}
+
+// 返回年级状态：grade 为「现在实际生效」的年级（0 = 不限年级）
+export function getGradeInfo() {
+  const s = getSettings()
+  const locked = !!s.gradeLocked
+  const base = s.gradeBase !== undefined && s.gradeBase !== null
+    ? Number(s.gradeBase)
+    : (s.grade !== undefined && s.grade !== null ? Number(s.grade) : 1)
+  const since = s.gradeSince || ''
+  const steps = locked && base > 0 ? gradeStepsSince(since) : 0
+  const grade = locked
+    ? (base > 0 ? Math.min(6, base + steps) : 0)
+    : (s.grade !== undefined && s.grade !== null ? Number(s.grade) : 1)
+  return {
+    locked,
+    base,
+    since,
+    steps,
+    grade,
+    nextUpAt: locked && base > 0 ? nextGradeUpAt(since) : ''
+  }
+}
+
+// 现在生效的年级（孩子端出题、模式过滤都用它）
+export function getActiveGrade() {
+  return getGradeInfo().grade
+}
+
+// 家长端设定年级：锁定 + 从今天重新计算自动升级
+export function setGradeByParent(g) {
+  const n = Math.max(0, Math.min(6, Number(g) || 0))
+  saveSettings({
+    grade: n,
+    gradeBase: n,
+    gradeSince: dayKey(),
+    gradeLocked: true
+  })
+  return getGradeInfo()
+}
+
+// 家长放权：允许孩子在设备上自选年级（保持当前年级不变）
+export function allowChildGrade() {
+  const info = getGradeInfo()
+  saveSettings({ grade: info.grade, gradeBase: info.grade, gradeLocked: false })
+  return getGradeInfo()
+}
+
 /* ---------------- 统计 ---------------- */
 export function getStats() {
   const s = read(K.stats, null)

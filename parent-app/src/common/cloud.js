@@ -115,7 +115,11 @@ export const lockNow = (code) => send(code, 'lock_now', {})
 export const ping = (code) => send(code, 'ping', {})
 export const message = (code, text) => send(code, 'msg', { text })
 export const setRules = (code, rules) => send(code, 'set_rules', { rules })
-export const setGrade = (code, grade) => send(code, 'set_grade', { grade })
+
+// lock 默认 true：家长设定年级后孩子端只能做该年级的题；
+// lock=false 表示放权，允许孩子在设备上自己选
+export const setGrade = (code, grade, lock) =>
+  send(code, 'set_grade', { grade: Number(grade) || 0, lock: lock !== false })
 
 // 设备重命名：家长端直接改云端记录，孩子端下次心跳后同步
 export async function renameDevice(code, name) {

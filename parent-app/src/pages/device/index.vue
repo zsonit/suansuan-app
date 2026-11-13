@@ -174,11 +174,16 @@
     </view>
 
     <!-- 年级 -->
-    <view class="card">
+    <view class="card" :class="{ need: needGrade }">
       <view class="card-t">
         <text>题目年级</text>
-        <text class="hint">孩子端出题难度</text>
+        <text class="hint">设定后孩子不能改</text>
       </view>
+
+      <view class="ask" v-if="needGrade">
+        先选孩子现在读的年级 —— 选完孩子端就只能做这个年级的题，其他年级点不了
+      </view>
+
       <view class="pills">
         <view
           v-for="(g, i) in GRADE_NAMES"
@@ -187,6 +192,19 @@
           :class="{ active: grade === i }"
           @click="doGrade(i)"
         >{{ g }}</view>
+      </view>
+
+      <view class="lockbar" v-if="gradeLocked">
+        <text class="lk">🔒 已锁定 {{ GRADE_NAMES[grade] || '' }}</text>
+        <text class="lkbtn" @click="allowChild">允许孩子自选</text>
+      </view>
+      <view class="lockbar" v-else>
+        <text class="lk muted">未锁定：孩子可以在设备上自己换年级</text>
+        <text class="lkbtn" @click="doGrade(grade)">锁定当前年级</text>
+      </view>
+
+      <view class="muted" style="margin-top: 10rpx">
+        每逢 9 月 1 日新学年自动升一级（六年级封顶）{{ gradeNextUp ? '，下次升级：' + gradeNextUp : '' }}。想跳级或留级，随时在这里改。
       </view>
     </view>
 
@@ -249,6 +267,9 @@ export default {
       reports: [],
       rules: Object.assign({}, DEFAULT_RULES),
       grade: 1,
+      gradeLocked: false,
+      gradeNextUp: '',
+      needGrade: false,
       loading: false,
       customMin: '',
       msgText: '',
@@ -269,6 +290,8 @@ export default {
   },
   onLoad(options) {
     this.code = String((options && options.code) || '').toUpperCase()
+    // 从「绑定成功」进来：提示先设年级
+    this.needGrade = String((options && options.setup) || '') === '1'
     const local = listBound().find((d) => d.code === this.code)
     if (local) {
       this.dev.name = local.name || ''
@@ -314,6 +337,9 @@ export default {
           const s = d.state || {}
           if (s.rules) this.rules = Object.assign({}, DEFAULT_RULES, s.rules)
           if (s.grade !== undefined && s.grade !== null) this.grade = Number(s.grade) || 0
+          if (s.gradeLocked !== undefined) this.gradeLocked = !!s.gradeLocked
+          this.gradeNextUp = s.gradeNextUp || ''
+          if (this.gradeLocked) this.needGrade = false
           this.loadReports()
         } else {
           this.dev = Object.assign({}, this.dev, { online: false })
@@ -402,13 +428,30 @@ export default {
     },
     async doGrade(g) {
       const old = this.grade
+      const oldLock = this.gradeLocked
       this.grade = g
+      this.gradeLocked = true
+      this.needGrade = false
       try {
-        await setGrade(this.code, g)
-        toast('年级已更新为' + GRADE_NAMES[g])
+        await setGrade(this.code, g, true)
+        toast('已设定：' + GRADE_NAMES[g] + '（孩子端不可改）')
         this.later()
+        setTimeout(() => this.load(false), 4000)
       } catch (e) {
         this.grade = old
+        this.gradeLocked = oldLock
+        toast('发送失败，请检查网络')
+      }
+    },
+    async allowChild() {
+      const old = this.gradeLocked
+      this.gradeLocked = false
+      try {
+        await setGrade(this.code, this.grade, false)
+        toast('已允许孩子自选年级')
+        this.later()
+      } catch (e) {
+        this.gradeLocked = old
         toast('发送失败，请检查网络')
       }
     },
@@ -510,6 +553,47 @@ export default {
 .pills {
   display: flex;
   flex-wrap: wrap;
+}
+/* 绑定后引导设年级：卡片描边高亮 + 提示条 */
+.card.need {
+  border: 2rpx solid #ffb27a;
+  box-shadow: 0 0 0 6rpx rgba(255, 154, 92, 0.1);
+}
+.ask {
+  background: #fff4e8;
+  color: #a2622c;
+  font-size: 25rpx;
+  font-weight: 700;
+  line-height: 1.6;
+  border-radius: 18rpx;
+  padding: 18rpx 22rpx;
+  margin-bottom: 18rpx;
+}
+.lockbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #f6f1eb;
+}
+.lk {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #a2622c;
+  flex: 1;
+  margin-right: 16rpx;
+  line-height: 1.5;
+}
+.lk.muted {
+  font-weight: 500;
+  color: #a89e94;
+}
+.lkbtn {
+  font-size: 24rpx;
+  color: #ff7a3d;
+  font-weight: 700;
+  flex: none;
 }
 .pills.inline {
   flex: 1;

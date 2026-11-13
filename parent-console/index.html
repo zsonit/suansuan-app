@@ -50,8 +50,13 @@
   }
   .pill.active { background: #ff7a3d; border-color: #ff7a3d; color: #fff; }
   .pill.danger { background: #fff0ef; border-color: #ffd4d1; color: #ff6b6b; }
-  .rep { border-top: 1px solid #f8f1e8; padding: 10px 0; }
-  .rep:first-of-type { border-top: none; }
+  .gline {
+    font-size: 12.5px; line-height: 1.7; color: #a2622c; background: #fff4e8;
+    border: 1px solid #f7e6d3; border-radius: 10px; padding: 8px 10px; margin: 2px 0 8px;
+  }
+  .gline b { color: #7a3f14; }
+  .glink { color: #ff7a3d; font-weight: 700; cursor: pointer; margin-left: 8px; text-decoration: underline; }
+  .rep { border-top: 1px solid #f8f1e8; padding: 10px 0; }  .rep:first-of-type { border-top: none; }
   .rephead { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
   .rephead .acc { color: #ff6b6b; font-weight: 800; }
   .rephead .acc.good { color: #2fbf87; }
@@ -166,6 +171,8 @@
       const st = (d.info && d.info.state) || {}
       const rules = st.rules || d.rules || { on: true, dailyQ: 30, dailyMin: 30, chalQ: 20, chalMin: 30, perQ: 1 }
       const grade = st.grade != null ? st.grade : (d.grade != null ? d.grade : 1)
+      const locked = !!st.gradeLocked
+      const nextUp = st.gradeNextUp || ''
       const lastSeen = d.info && d.info.online_at
         ? ' · 最后在线 ' + new Date(d.info.online_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         : ''
@@ -209,8 +216,14 @@
           <span class="pill ${rules.chalQ === 20 ? 'active' : ''}" onclick="setRule(${i}, 'chalQ', 20)">挑战20题</span>
           <span class="pill ${rules.chalQ === 30 ? 'active' : ''}" onclick="setRule(${i}, 'chalQ', 30)">挑战30题</span>
         </div>
-        <div class="row">
+        <div class="row"><span class="lbl">题目年级</span>
           ${GRADES.map((g, gi) => `<span class="pill ${grade === gi ? 'active' : ''}" onclick="setGrade(${i}, ${gi})">${g}</span>`).join('')}
+        </div>
+        <div class="gline">
+          ${locked
+            ? `🔒 已锁定 <b>${GRADES[grade] || ''}</b>：孩子端只能做这个年级的题，点不了其他年级${nextUp ? `　·　${nextUp} 自动升一级` : ''}
+               <span class="glink" onclick="allowChild(${i})">允许孩子自选</span>`
+            : `未锁定：孩子可在设备上自己换年级 <span class="glink" onclick="setGrade(${i}, ${grade})">锁定当前年级</span>`}
         </div>
         <div class="card" style="margin-top:10px;box-shadow:none;background:#fff">
           <h2>做题报告（最近 ${d.reports ? d.reports.length : 0} 次）</h2>
@@ -244,7 +257,17 @@
   }
   async function setGrade(i, g) {
     devices[i].grade = g
-    if (await send(devices[i].code, 'set_grade', { grade: g })) toast('年级已更新')
+    if (await send(devices[i].code, 'set_grade', { grade: g, lock: true })) {
+      toast('年级已设定并锁定，孩子端几秒内生效')
+      setTimeout(refresh, 1500)
+    }
+  }
+  async function allowChild(i) {
+    const g = devices[i].grade != null ? devices[i].grade : 1
+    if (await send(devices[i].code, 'set_grade', { grade: g, lock: false })) {
+      toast('已允许孩子在设备上自选年级')
+      setTimeout(refresh, 1500)
+    }
   }
 
   // URL 带配对码（扫孩子设备二维码进来）：自动填入

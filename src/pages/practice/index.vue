@@ -197,7 +197,7 @@ import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
 import { stagePointGenerate } from '@/common/stages'
 import { openGenerate } from '@/common/openbank'
-import { getSettings, addWrong, addRecord, saveResult, getWrong, getWatchRules, addDailyProgress, addChallengeProgress } from '@/common/store'
+import { getSettings, addWrong, addRecord, saveResult, getWrong, getWatchRules, addDailyProgress, addChallengeProgress, getGradeInfo, getActiveGrade } from '@/common/store'
 import { sfx, speak, cheerRight, cheerWrong, CHEERS_STREAK } from '@/common/sound'
 
 // 骰子点阵：3x3 槽位（0-8）
@@ -275,6 +275,9 @@ const timeText = computed(() => {
 })
 
 onLoad((q) => {
+  // 家长设定了年级：出题年级一律以家长设定为准，
+  // 页面参数里带来的 grade 不采信（防止孩子从别处带参数绕过）
+  const gi = getGradeInfo()
   cfg.value = {
     mode: q.mode || 'add',
     difficulty: Number(q.difficulty || 1),
@@ -282,7 +285,8 @@ onLoad((q) => {
     source: q.source || '',
     key: q.key || '',
     fun: q.fun || '',
-    grade: Number(q.grade || 0)
+    grade: gi.locked ? gi.grade : Number(q.grade || 0),
+    gradeLocked: !!gi.locked
   }
 
   if (cfg.value.source === 'wrong') {
@@ -297,7 +301,7 @@ onLoad((q) => {
     list.value = generateForGrade(cfg.value.grade, cfg.value.count)
   } else if (cfg.value.source === 'daily' || cfg.value.source === 'challenge') {
     // 先学再看：每日任务 / 挑战赛，按年级随机出题（不让孩子挑简单卡）
-    const g = cfg.value.grade || settings.value.grade || 1
+    const g = cfg.value.grade || getActiveGrade() || 1
     list.value = generateForGrade(g, cfg.value.count)
   } else {
     list.value = generate(cfg.value.mode, cfg.value.difficulty, cfg.value.count)

@@ -70,7 +70,7 @@
       </view>
 
       <view class="more">
-        <text>{{ r.rulesOn ? '专注锁定运行中' : '专注锁定已关闭' }}</text>
+        <text>{{ r.gradeText }} · {{ r.rulesOn ? '专注锁定运行中' : '专注锁定已关闭' }}</text>
         <text class="arrow">查看详情与做题报告 ›</text>
       </view>
     </view>
@@ -87,7 +87,7 @@
 
 <script>
 import {
-  listBound, refreshAll, unlock, lockNow, onlineText, toast
+  listBound, refreshAll, unlock, lockNow, onlineText, GRADE_NAMES, toast
 } from '@/common/cloud'
 
 const QUICK = [5, 10, 15, 30]
@@ -111,6 +111,10 @@ export default {
         const d = this.devices[b.code] || null
         const st = (d && d.state) || {}
         const rules = st.rules || {}
+        const g = st.grade !== undefined && st.grade !== null ? Number(st.grade) : -1
+        const locked = !!st.gradeLocked
+        let gradeText = '年级待设置'
+        if (g >= 0) gradeText = (GRADE_NAMES[g] || g + ' 年级') + (locked ? ' · 已锁定' : ' · 孩子可自选')
         return {
           code: b.code,
           name: (d && d.name) || b.name || '孩子的设备',
@@ -120,7 +124,8 @@ export default {
           dailyDone: Number(st.dailyDone) || 0,
           dailyQ: Number(rules.dailyQ) || 30,
           chalDone: Number(st.chalDone) || 0,
-          rulesOn: rules.on !== false
+          rulesOn: rules.on !== false,
+          gradeText
         }
       })
     }
@@ -172,8 +177,11 @@ export default {
       try {
         this.bound = await bind(code)
         this.codeIn = ''
-        this.load(false)
         toast('绑定成功')
+        // 绑定成功直接进入设备页，第一步先选孩子年级
+        setTimeout(() => {
+          uni.navigateTo({ url: '/pages/device/index?code=' + code + '&setup=1' })
+        }, 350)
       } catch (e) {
         this.bindErr = String((e && e.message) || '绑定失败')
       }
