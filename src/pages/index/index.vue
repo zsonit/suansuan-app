@@ -20,11 +20,11 @@
       <view class="watch-stats">
         <view class="watch-cell">
           <text class="watch-num">{{ Math.round(watchUsed) }}</text>
-          <text class="watch-label">今日已看(分钟)</text>
+          <text class="watch-label">今日已用(分钟)</text>
         </view>
         <view class="watch-cell">
           <text class="watch-num">{{ Math.round(watchLeft) }}</text>
-          <text class="watch-label">还能看(分钟)</text>
+          <text class="watch-label">还能用(分钟)</text>
         </view>
         <view class="watch-cell">
           <text class="watch-num">{{ Math.round(watchEarn) }}</text>

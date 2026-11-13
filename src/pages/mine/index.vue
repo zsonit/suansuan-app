@@ -13,7 +13,7 @@
         </view>
         <text class="nick-sub">在算算星球练习第 {{ days }} 天 · 点名字可以改</text>
         <text class="watch-line" @click.stop="goSettings">
-          {{ watchOn ? `📺 今日已看 ${watchUsed} 分钟 · 还能看 ${watchLeft} 分钟` : '📺 先学再看未开启 · 点这里去开启' }}
+          {{ watchOn ? `📺 今日已用 ${watchUsed} 分钟 · 还能用 ${watchLeft} 分钟` : '📺 先学再看未开启 · 点这里去开启' }}
         </text>
       </view>
     </view>
@@ -55,6 +55,12 @@
         <text class="row-val">{{ wrongCount }} 题</text>
         <text class="row-chev">›</text>
       </view>
+      <view class="row" @click="openTemp">
+        <text class="row-icon">🔓</text>
+        <text class="row-text">家长临时解锁</text>
+        <text class="row-val">5 分钟 ~ 2 小时</text>
+        <text class="row-chev">›</text>
+      </view>
       <view class="row" @click="goSettings">
         <text class="row-icon">⚙️</text>
         <text class="row-text">练习设置</text>
@@ -85,6 +91,57 @@
       <text class="gate-err" v-if="gateErr">{{ gateErr }}</text>
       <view class="gate-btn" @click="gateSubmit">解锁</view>
     </view>
+
+    <!-- 家长临时解锁：输密码 → 选时长 → 临时放行（不是关闭锁定） -->
+    <view class="gate" v-if="tempOpen">
+      <text class="gate-icon">🔓</text>
+      <text class="gate-title">家长临时解锁</text>
+
+      <template v-if="tempStep === 'pin'">
+        <text class="gate-desc">输入锁定密码，临时用一下手机</text>
+        <input
+          class="gate-input"
+          type="number"
+          :password="true"
+          maxlength="6"
+          v-model="tempPin"
+          placeholder="6 位数字密码"
+        />
+        <text class="gate-err" v-if="tempErr">{{ tempErr }}</text>
+        <text class="gate-sub">这只是临时解锁，锁定不会关闭；想彻底关闭请到「练习设置」</text>
+        <view class="gate-btn" @click="tempPinOk">确定</view>
+        <text class="gate-cancel" @click="tempOpen = false">取消</text>
+      </template>
+
+      <template v-else>
+        <text class="gate-desc">选择临时使用时长，到点自动恢复锁定</text>
+        <view class="temp-pills">
+          <view
+            v-for="m in TEMP_OPTS"
+            :key="m"
+            class="temp-pill"
+            :class="{ active: tempMin === m && !tempCustom }"
+            @click="pickTemp(m)"
+          >
+            {{ m >= 60 ? m / 60 + ' 小时' : m + ' 分钟' }}
+          </view>
+        </view>
+        <view class="temp-custom">
+          <text class="temp-custom-label">自定义</text>
+          <input
+            class="temp-custom-input"
+            type="number"
+            v-model="tempCustom"
+            placeholder="输入分钟数"
+            @input="tempMin = 0"
+          />
+          <text class="temp-custom-unit">分钟</text>
+        </view>
+        <text class="gate-sub">临时解锁不扣孩子的使用时间；到点后自动恢复锁定</text>
+        <view class="gate-btn" @click="tempConfirm">临时解锁 {{ tempText }}</view>
+        <text class="gate-cancel" @click="tempOpen = false">取消</text>
+      </template>
+    </view>
   </view>
 </template>
 
@@ -92,7 +149,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory, getWatchRules, getWatchUsed, watchAvailable } from '@/common/store'
-import { getConfig, verifyPin, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts } from '@/common/kiosk'
+import { getConfig, verifyPin, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts, isEnabled, startUnlock } from '@/common/kiosk'
 
 const stats = ref({ total: 0, right: 0, days: {} })
 const today = ref({ n: 0, right: 0 })
@@ -184,8 +241,89 @@ onShow(async () => {
   watchLeft.value = watchAvailable()
 })
 
-function editNick() {
-  uni.showModal({
+// ===== 家长临时解锁（临时放行，不等于关闭锁定） =====
+const TEMP_OPTS = [5, 10, 15, 30, 60, 120]
+const tempOpen = ref(false)
+const tempStep = ref('pin')
+const tempPin = ref('')
+const tempErr = ref('')
+const tempMin = ref(15)
+const tempCustom = ref('')
+let tempBusy = false
+
+const tempText = computed(() => {
+  const m = tempCustom.value ? Number(tempCustom.value) : tempMin.value
+  if (!m || m <= 0) return '自定义'
+  if (m >= 60) {
+    const h = Math.floor(m / 60)
+    const r = m % 60
+    return r ? `${h} 小时 ${r} 分` : `${h} 小时`
+  }
+  return `${m} 分钟`
+})
+
+async function openTemp() {
+  const cfg = await getConfig()
+  const on = await isEnabled()
+  if (!on || !cfg || !cfg.pinHash) {
+    uni.showToast({ title: '请先到设置里开启专注锁定并设置密码', icon: 'none' })
+    return
+  }
+  tempStep.value = 'pin'
+  tempPin.value = ''
+  tempErr.value = ''
+  tempCustom.value = ''
+  tempMin.value = 15
+  tempOpen.value = true
+}
+
+async function tempPinOk() {
+  if (tempBusy) return
+  const left = lockoutLeft()
+  if (left > 0) {
+    tempErr.value = `错太多次了，${Math.ceil(left / 1000)} 秒后再试`
+    return
+  }
+  tempBusy = true
+  try {
+    const cfg = await getConfig()
+    if (await verifyPin(cfg, tempPin.value)) {
+      resetAttempts()
+      tempPin.value = ''
+      tempErr.value = ''
+      tempStep.value = 'time'
+    } else {
+      addWrongAttempt()
+      const l2 = lockoutLeft()
+      tempErr.value = l2 > 0 ? '连错 5 次，锁定 5 分钟' : '密码不对，再想想'
+      tempPin.value = ''
+    }
+  } finally {
+    tempBusy = false
+  }
+}
+
+function pickTemp(m) {
+  tempMin.value = m
+  tempCustom.value = ''
+}
+
+async function tempConfirm() {
+  const m = tempCustom.value ? Math.floor(Number(tempCustom.value)) : tempMin.value
+  if (!m || m < 1) {
+    uni.showToast({ title: '请选择或输入时长', icon: 'none' })
+    return
+  }
+  if (m > 720) {
+    uni.showToast({ title: '最长 12 小时', icon: 'none' })
+    return
+  }
+  tempOpen.value = false
+  // 临时暂停自动拉回并回桌面，到点后锁定自动恢复（不扣孩子观看时间）
+  await startUnlock(m)
+}
+
+function editNick() {  uni.showModal({
     title: '给自己起个名字',
     editable: true,
     placeholderText: '最多 12 个字，比如：小星星',
@@ -472,5 +610,66 @@ function about() {
   font-weight: 800;
   border-radius: 100rpx;
   box-shadow: 0 12rpx 28rpx rgba(255, 122, 61, 0.3);
+}
+.gate-sub {
+  margin-top: 18rpx;
+  font-size: 22rpx;
+  color: #b7a99b;
+  line-height: 1.5;
+  text-align: center;
+}
+.gate-cancel {
+  margin-top: 22rpx;
+  font-size: 26rpx;
+  color: #a08f80;
+}
+.temp-pills {
+  margin-top: 30rpx;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  justify-content: center;
+}
+.temp-pill {
+  padding: 0 26rpx;
+  height: 76rpx;
+  line-height: 76rpx;
+  border-radius: 100rpx;
+  background: #fff3e8;
+  color: #8a7a6d;
+  font-size: 27rpx;
+  font-weight: 700;
+}
+.temp-pill.active {
+  background: linear-gradient(135deg, #ff9a5c, #ff7a3d);
+  color: #fff;
+}
+.temp-custom {
+  margin-top: 22rpx;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #fff8f1;
+  border: 2rpx solid #ffe3cd;
+  border-radius: 18rpx;
+  padding: 0 20rpx;
+  height: 84rpx;
+}
+.temp-custom-label {
+  font-size: 26rpx;
+  color: #8a7a6d;
+  font-weight: 700;
+}
+.temp-custom-input {
+  flex: 1;
+  font-size: 30rpx;
+  color: #332c26;
+  text-align: center;
+}
+.temp-custom-unit {
+  font-size: 26rpx;
+  color: #8a7a6d;
+  font-weight: 700;
 }
 </style>

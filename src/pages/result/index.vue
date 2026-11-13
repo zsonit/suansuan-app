@@ -43,7 +43,7 @@
     </view>
 
     <view class="reward" v-if="reward">
-      <text class="reward-title">🎉 获得观看时间奖励</text>
+      <text class="reward-title">🎉 获得使用时间奖励</text>
       <text class="reward-desc">{{ reward.desc }}</text>
       <view class="reward-btn" v-if="reward.can" @click="claimReward">
         去玩吧 · 解锁 {{ reward.minutes }} 分钟
@@ -145,14 +145,14 @@ async function calcReward() {
     reward.value = {
       can: false,
       minutes: 0,
-      desc: '观看时间用完啦，回首页做「每日任务」或「挑战赛」赚时间吧！'
+      desc: '使用时间用完啦，回首页做「每日任务」或「挑战赛」赚时间吧！'
     }
     return
   }
   reward.value = {
     can: true,
     minutes: avail,
-    desc: `可以看 ${avail} 分钟，时间到会自动回来说「再做一组」`
+    desc: `可以用 ${avail} 分钟，时间到会自动回来说「再做一组」`
   }
 }
 

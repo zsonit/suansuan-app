@@ -86,10 +86,10 @@
     </view>
 
     <view class="group">
-      <view class="group-title">先学再看 · 答题解锁观看时间</view>
+      <view class="group-title">先学再看 · 答题解锁使用时间</view>
       <view class="row">
         <view class="row-main">
-          <text class="row-title">答题解锁观看时间</text>
+          <text class="row-title">答题解锁使用时间</text>
           <text class="row-desc">题目按年级随机出，孩子不能挑简单卡；做多少题换多少时间，到点自动拉回</text>
         </view>
         <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
@@ -110,7 +110,7 @@
         <view class="row">
           <view class="row-main">
             <text class="row-title">⏰ 时间到强制挑战</text>
-            <text class="row-desc">观看时间用完被拉回后，强制做 10 道题才能继续看，做完可接着挑战赚时间</text>
+            <text class="row-desc">使用时间用完被拉回后，强制做 10 道题才能继续看，做完可接着挑战赚时间</text>
           </view>
         </view>
       </template>
