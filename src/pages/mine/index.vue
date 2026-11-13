@@ -13,7 +13,7 @@
         </view>
         <text class="nick-sub">在算算星球练习第 {{ days }} 天 · 点名字可以改</text>
         <text class="watch-line" @click.stop="goSettings">
-          {{ watchOn ? `📺 今日已解锁 ${watchUsed} 分钟 · 还能看 ${watchLeft} 分钟` : '📺 先学再看未开启 · 点这里去开启' }}
+          {{ watchOn ? `📺 今日已看 ${watchUsed} 分钟 · 还能看 ${watchLeft} 分钟` : '📺 先学再看未开启 · 点这里去开启' }}
         </text>
       </view>
     </view>
@@ -91,7 +91,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory, getWatchRules, getWatchUsed } from '@/common/store'
+import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory, getWatchRules, getWatchUsed, watchAvailable } from '@/common/store'
 import { getConfig, verifyPin, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts } from '@/common/kiosk'
 
 const stats = ref({ total: 0, right: 0, days: {} })
@@ -121,7 +121,6 @@ const nick = ref('小学员')
 // 先学再看：今日已解锁 / 还能看（当前解锁剩余算在「还能看」里）
 const watchOn = ref(false)
 const watchUsed = ref(0)
-const watchCap = ref(0)
 const watchLeft = ref(0)
 
 // ===== 家长门禁 =====
@@ -181,9 +180,8 @@ onShow(async () => {
   nick.value = settings.value.nick || '小学员'
   const r = getWatchRules()
   watchOn.value = !!r.on
-  watchCap.value = r.cap || 0
   watchUsed.value = getWatchUsed()
-  watchLeft.value = Math.max(0, watchCap.value - watchUsed.value)
+  watchLeft.value = watchAvailable()
 })
 
 function editNick() {

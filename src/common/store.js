@@ -153,7 +153,8 @@ export function takeResult() {
 }
 
 /* ---------------- 先学再看（答题解锁观看时间） ---------------- */
-const DEFAULT_WATCH_RULES = { on: false, minutes: 10, cap: 30, passAcc: 60 }
+// 规则：每天白送 base 分钟；base 用完后，每做一道题 +perQ 分钟；不设固定上限
+const DEFAULT_WATCH_RULES = { on: false, base: 30, perQ: 1 }
 
 export function getWatchRules() {
   return Object.assign({}, DEFAULT_WATCH_RULES, read(K.watchRules, {}))
@@ -165,17 +166,45 @@ export function saveWatchRules(patch) {
   return next
 }
 
-// 今日已用观看分钟数（跨天自动清零）
-export function getWatchUsed() {
+// 今日观看账户（跨天自动清零）：used=已领用(已看)分钟，earned=做题赚的分钟
+function todayWatch() {
   const s = read(K.watchState, null) || {}
-  if (s.date !== dayKey()) return 0
-  return s.used || 0
+  if (s.date !== dayKey()) return { date: dayKey(), used: 0, earned: 0 }
+  return { date: s.date, used: s.used || 0, earned: s.earned || 0 }
 }
 
-export function addWatchUsed(min) {
-  const used = getWatchUsed() + min
-  write(K.watchState, { date: dayKey(), used })
-  return used
+export function getWatchUsed() {
+  return todayWatch().used
+}
+
+export function getWatchEarned() {
+  return todayWatch().earned
+}
+
+// 每做一道题调用：earned +min
+export function addWatchEarned(min) {
+  const s = todayWatch()
+  s.earned += min
+  write(K.watchState, s)
+  return s.earned
+}
+
+// 还能看 = max(0, 基础 + 赚的 - 已看)
+export function watchAvailable() {
+  const r = getWatchRules()
+  const s = todayWatch()
+  return Math.max(0, (r.base || 0) + s.earned - s.used)
+}
+
+// 领用全部可用分钟：记入已用、设定解锁截止时间戳，返回本次解锁分钟数
+export function claimWatch() {
+  const m = watchAvailable()
+  if (m <= 0) return 0
+  const s = todayWatch()
+  s.used += m
+  write(K.watchState, s)
+  setUnlockUntil(Date.now() + m * 60 * 1000)
+  return m
 }
 
 // 当前解锁截止时间戳（0 = 未解锁）

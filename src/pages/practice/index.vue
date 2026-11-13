@@ -197,7 +197,7 @@ import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
 import { stagePointGenerate } from '@/common/stages'
 import { openGenerate } from '@/common/openbank'
-import { getSettings, addWrong, addRecord, saveResult, getWrong } from '@/common/store'
+import { getSettings, addWrong, addRecord, saveResult, getWrong, getWatchRules, addWatchEarned } from '@/common/store'
 import { sfx, speak, cheerRight, cheerWrong, CHEERS_STREAK } from '@/common/sound'
 
 // 骰子点阵：3x3 槽位（0-8）
@@ -438,6 +438,9 @@ const APPEND_LIMIT = 60
 function settle(my) {
   const q = current.value
   const ok = isCorrect(q, my)
+  // 先学再看：每做一道题 +1 分钟观看时间（规则开启时）
+  const wr = getWatchRules()
+  if (wr.on && (wr.perQ || 0) > 0) addWatchEarned(wr.perQ)
   if (ok) {
     rightCount.value++
     feedback.value = 'right'

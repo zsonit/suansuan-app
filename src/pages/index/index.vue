@@ -20,15 +20,15 @@
       <view class="watch-stats">
         <view class="watch-cell">
           <text class="watch-num">{{ watchUsed }}</text>
-          <text class="watch-label">今日已解锁(分钟)</text>
+          <text class="watch-label">今日已看(分钟)</text>
         </view>
         <view class="watch-cell">
           <text class="watch-num">{{ watchLeft }}</text>
           <text class="watch-label">还能看(分钟)</text>
         </view>
         <view class="watch-cell">
-          <text class="watch-num">{{ watchCap }}</text>
-          <text class="watch-label">每日上限(分钟)</text>
+          <text class="watch-num">{{ watchEarn }}</text>
+          <text class="watch-label">做题赚的(分钟)</text>
         </view>
       </view>
     </view>
@@ -193,7 +193,7 @@ import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed } from '@/common/store'
+import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable } from '@/common/store'
 
 const gradeSel = ref(1)
 const mode = ref('add')
@@ -323,16 +323,17 @@ onShow(() => {
   refreshWatch()
 })
 
-// 先学再看：观看时间卡（今日已解锁 / 还能看 / 每日上限）
+// 先学再看：观看时间卡（今日已看 / 还能看 / 做题赚的）
 const watchOn = ref(false)
 const watchUsed = ref(0)
-const watchCap = ref(0)
-const watchLeft = computed(() => Math.max(0, watchCap.value - watchUsed.value))
+const watchEarn = ref(0)
+const watchLeft = ref(0)
 function refreshWatch() {
   const r = getWatchRules()
   watchOn.value = !!r.on
-  watchCap.value = r.cap || 0
   watchUsed.value = getWatchUsed()
+  watchEarn.value = getWatchEarned()
+  watchLeft.value = watchAvailable()
 }
 
 // 自由时间倒计时横幅

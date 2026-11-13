@@ -61,7 +61,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { takeResult, getSettings, getWatchRules, getWatchUsed, addWatchUsed, setUnlockUntil } from '@/common/store'
+import { takeResult, getSettings, getWatchRules, watchAvailable, claimWatch } from '@/common/store'
 import { fmtDuration, exprText } from '@/common/questions'
 import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
 import { isServiceOn, startUnlock } from '@/common/kiosk'
@@ -114,28 +114,22 @@ const reward = ref(null)
 async function calcReward() {
   const rules = getWatchRules()
   if (!rules.on) return
-  const remaining = Math.max(0, rules.cap - getWatchUsed())
-  if (remaining <= 0) {
-    reward.value = { can: false, minutes: 0, desc: '今天的观看时间已经用完啦，明天再来' }
+  const avail = watchAvailable()
+  if (avail <= 0) {
+    reward.value = { can: false, minutes: 0, desc: '今天送的时间用完啦，每做一道题就能赚 1 分钟，快去练习吧！' }
     return
   }
-  if (acc.value < (rules.passAcc || 60)) {
-    reward.value = { can: false, minutes: 0, desc: `正确率到 ${rules.passAcc || 60}% 就能解锁 ${rules.minutes} 分钟，再练一组吧` }
-    return
-  }
-  const minutes = Math.min(rules.minutes, remaining)
   reward.value = {
     can: true,
-    minutes,
-    desc: remaining < rules.minutes ? `今天只剩 ${remaining} 分钟额度了，先玩 ${minutes} 分钟` : `答完一组奖励 ${minutes} 分钟，时间到会自动回来说「再做一组」`
+    minutes: avail,
+    desc: `可以看 ${avail} 分钟，时间到会自动回来说「再做一组」`
   }
 }
 
 async function claimReward() {
   const minutes = reward.value && reward.value.minutes
   if (!minutes) return
-  addWatchUsed(minutes)
-  setUnlockUntil(Date.now() + minutes * 60 * 1000)
+  claimWatch() // 记账 + 设定解锁截止
   const svcOn = await isServiceOn()
   if (svcOn) {
     // 暂停自动拉回并回桌面，时间到无障碍服务会把孩子带回练习

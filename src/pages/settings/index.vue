@@ -90,60 +90,32 @@
       <view class="row">
         <view class="row-main">
           <text class="row-title">答题解锁观看时间</text>
-          <text class="row-desc">配合专注锁定：答完一组且正确率达标，可去桌面看视频，时间到自动拉回</text>
+          <text class="row-desc">每天先送基础时间；用完后每做一道题 +1 分钟，做完就能接着看，到点自动拉回</text>
         </view>
         <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
       </view>
       <template v-if="watchRules.on">
         <view class="row">
           <view class="row-main">
-            <text class="row-title">每组解锁</text>
-            <text class="row-desc">答完一组题奖励的观看时间</text>
+            <text class="row-title">每天基础时间</text>
+            <text class="row-desc">每天白送的观看分钟数，跨天自动重置</text>
           </view>
           <view class="mini-pills">
             <view
-              v-for="m in [5, 10, 15, 20]"
-              :key="m"
+              v-for="b in [10, 20, 30, 60]"
+              :key="b"
               class="mpill"
-              :class="{ active: watchRules.minutes === m }"
-              @click="setWatch('minutes', m)"
+              :class="{ active: watchRules.base === b }"
+              @click="setWatch('base', b)"
             >
-              {{ m }}分
+              {{ b }}分
             </view>
           </view>
         </view>
         <view class="row">
           <view class="row-main">
-            <text class="row-title">每天最多看</text>
-            <text class="row-desc">超出后当天不再解锁，第二天重置</text>
-          </view>
-          <view class="mini-pills">
-            <view
-              v-for="c in [15, 30, 60, 120]"
-              :key="c"
-              class="mpill"
-              :class="{ active: watchRules.cap === c }"
-              @click="setWatch('cap', c)"
-            >
-              {{ c }}分
-            </view>
-          </view>
-        </view>
-        <view class="row">
-          <view class="row-main">
-            <text class="row-title">解锁门槛</text>
-            <text class="row-desc">正确率达标才能获得奖励</text>
-          </view>
-          <view class="mini-pills">
-            <view
-              v-for="p in [60, 80]"
-              :key="p"
-              class="mpill"
-              :class="{ active: watchRules.passAcc === p }"
-              @click="setWatch('passAcc', p)"
-            >
-              {{ p }}%
-            </view>
+            <text class="row-title">每题奖励</text>
+            <text class="row-desc">基础时间用完后，每做一道题 +{{ watchRules.perQ || 1 }} 分钟观看时间，不设上限</text>
           </view>
         </view>
       </template>
