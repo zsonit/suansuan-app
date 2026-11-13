@@ -801,4 +801,41 @@ function startGrade() {
   color: #fff;
 }
 
+/* ===================== 平板/电视横屏适配 ===================== */
+@media (orientation: landscape) and (min-width: 700px) {
+  /* 横屏纵向空间小：允许整页滚动，不再锁 100vh 裁切 */
+  .page {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    padding-top: calc(max(env(safe-area-inset-top), var(--status-bar-height, 0px)) + 12rpx);
+  }
+  /* 顶部信息与观看时间卡横向并排，节省纵向空间 */
+  .watch-card {
+    margin-top: 20rpx;
+  }
+  .watch-stats {
+    padding-top: 4rpx;
+  }
+  /* 功能卡片：宽屏下两列改三列，视觉更均衡 */
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22rpx;
+  }
+  .mode {
+    width: auto;
+    margin-bottom: 0;
+  }
+  /* 学段 chips、年级/难度 pills 横向更宽松 */
+  .stage-chips {
+    gap: 20rpx;
+  }
+  .hero {
+    padding: 44rpx 40rpx 38rpx;
+  }
+  .sec-title {
+    margin: 36rpx 0 18rpx;
+  }
+}
 </style>

@@ -66,4 +66,25 @@ uni-tabbar .uni-tabbar__bd {
   height: 68px !important;
 }
 /* #endif */
+
+/* ===================== 多设备屏幕适配 ===================== */
+/* 手机竖屏：保持原始 750 设计稿布局（rpx 按屏宽换算，天然适配） */
+/* 平板横屏 / 电视 / 显示器：内容限宽居中成「大平板」布局，不铺满不拉伸 */
+@media (orientation: landscape) and (min-width: 700px) {
+  uni-page-body {
+    background: #f3e7d6;
+  }
+  uni-page-body > .page {
+    max-width: 1000px;
+    margin: 0 auto;
+    min-height: 100vh;
+    box-shadow: 0 0 60px rgba(90, 60, 30, 0.12);
+  }
+  uni-tabbar {
+    max-width: 1000px !important;
+    margin: 0 auto;
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
 </style>

@@ -1053,4 +1053,66 @@ function quit() {
   font-size: 32rpx;
   font-weight: 800;
 }
+
+/* ===================== 平板/电视横屏适配 ===================== */
+@media (orientation: landscape) and (min-width: 700px) {
+  /* 顶部导航/进度条占满一行，题卡与键盘并排占余下空间 */
+  .page {
+    flex-flow: row wrap;
+    align-content: flex-start;
+  }
+  .nav,
+  .progress {
+    width: 100%;
+  }
+  .progress {
+    width: calc(100% - 72rpx);
+  }
+  /* 有键盘（输入题）：题卡左 58%，键盘右 42% */
+  .stage {
+    flex: none;
+    width: 58%;
+    align-self: stretch;
+  }
+  .pad {
+    width: 42%;
+    align-self: center;
+    margin-bottom: 0;
+    padding: 10rpx 30rpx calc(24rpx + env(safe-area-inset-bottom));
+  }
+  /* 无键盘（选择/判断/比较题）：题卡独占一行居中 */
+  .stage:last-child {
+    width: 100%;
+    flex: 1;
+  }
+  .stage.lift {
+    padding-bottom: 4vh;
+  }
+  .card {
+    border-radius: 36rpx;
+    padding: 40rpx 32rpx 36rpx;
+  }
+}
+
+/* 手机横屏（高度小）：键盘压扁防溢出 */
+@media (orientation: landscape) and (min-width: 700px) and (max-height: 560px) {
+  .key {
+    height: 86rpx;
+    font-size: 36rpx;
+    border-radius: 20rpx;
+  }
+  .pad {
+    padding-bottom: calc(10rpx + env(safe-area-inset-bottom));
+  }
+  .expr {
+    font-size: 60rpx;
+  }
+  .expr.small {
+    font-size: 40rpx;
+  }
+  .answer {
+    height: 96rpx;
+    margin-top: 20rpx;
+  }
+}
 </style>

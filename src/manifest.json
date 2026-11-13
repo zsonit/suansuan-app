@@ -54,5 +54,11 @@
     "uniStatistics": {
         "enable": false
     },
+    /* H5/WebView 端：rpx 换算上限 960px，电视/平板大屏上字号不再随屏宽无限放大 */
+    "h5" : {
+        "rpxCalcMaxDeviceWidth" : 960,
+        "rpxCalcBaseDeviceWidth" : 375,
+        "rpxCalcIncludeWidth" : 750
+    },
     "vueVersion" : "3"
 }
