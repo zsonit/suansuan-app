@@ -61,7 +61,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { takeResult, getSettings, getWatchRules, watchAvailable, claimWatch } from '@/common/store'
+import { takeResult, getSettings, getWatchRules, watchAvailable, watchBaseProgress, claimWatch } from '@/common/store'
 import { fmtDuration, exprText } from '@/common/questions'
 import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
 import { isServiceOn, startUnlock } from '@/common/kiosk'
@@ -116,7 +116,11 @@ async function calcReward() {
   if (!rules.on) return
   const avail = watchAvailable()
   if (avail <= 0) {
-    reward.value = { can: false, minutes: 0, desc: '今天送的时间用完啦，每做一道题就能赚 1 分钟，快去练习吧！' }
+    const p = watchBaseProgress()
+    const rules = getWatchRules()
+    reward.value = p.phase === 1
+      ? { can: false, minutes: 0, desc: `再做 ${p.need} 道题就能赚满 ${rules.base} 分钟观看时间，加油！` }
+      : { can: false, minutes: 0, desc: '时间用完啦，每做一道题就能再赚 1 分钟，快去练习吧！' }
     return
   }
   reward.value = {

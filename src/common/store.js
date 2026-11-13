@@ -153,8 +153,9 @@ export function takeResult() {
 }
 
 /* ---------------- 先学再看（答题解锁观看时间） ---------------- */
-// 规则：每天白送 base 分钟；base 用完后，每做一道题 +perQ 分钟；不设固定上限
-const DEFAULT_WATCH_RULES = { on: false, base: 30, perQ: 1 }
+// 规则：每天先做 baseQ 道题，赚满 base 分钟基础时间（每道 base/baseQ 分钟）；
+//       赚满后每做一道题再 +perQ 分钟；不设固定上限。时间不是白送的，全靠做题赚。
+const DEFAULT_WATCH_RULES = { on: false, base: 30, baseQ: 20, perQ: 1 }
 
 export function getWatchRules() {
   return Object.assign({}, DEFAULT_WATCH_RULES, read(K.watchRules, {}))
@@ -181,19 +182,43 @@ export function getWatchEarned() {
   return todayWatch().earned
 }
 
-// 每做一道题调用：earned +min
-export function addWatchEarned(min) {
+// 每做一道题调用一次：n = 本次做的题数
+// 阶段一（还没赚满基础时间）：每道题赚 base/baseQ 分钟，最多累计到 base
+// 阶段二（已赚满基础时间）：每道题 +perQ 分钟
+export function addWatchEarned(n) {
+  const r = getWatchRules()
   const s = todayWatch()
-  s.earned += min
+  const base = r.base || 0
+  const perBase = base / Math.max(1, r.baseQ || 20)
+  let cnt = n || 1
+  while (cnt-- > 0) {
+    if (base > 0 && s.earned < base) {
+      s.earned = Math.min(base, s.earned + perBase)
+    } else {
+      s.earned += r.perQ || 1
+    }
+  }
   write(K.watchState, s)
   return s.earned
 }
 
-// 还能看 = max(0, 基础 + 赚的 - 已看)
+// 还能看 = max(0, 赚的 - 已看)（基础时间也是做题赚来的，不是白送的）
 export function watchAvailable() {
+  const s = todayWatch()
+  return Math.max(0, s.earned - s.used)
+}
+
+// 基础时间进度（供 UI 展示）：done=已完成题数 need=还差几道题赚满
+export function watchBaseProgress() {
   const r = getWatchRules()
   const s = todayWatch()
-  return Math.max(0, (r.base || 0) + s.earned - s.used)
+  const base = r.base || 0
+  const perBase = base / Math.max(1, r.baseQ || 20)
+  if (base <= 0 || s.earned >= base) {
+    return { phase: 2, done: r.baseQ || 20, need: 0, perBase }
+  }
+  const done = Math.min(r.baseQ || 20, Math.floor(s.earned / perBase + 1e-6))
+  return { phase: 1, done, need: Math.ceil((base - s.earned) / perBase - 1e-6), perBase }
 }
 
 // 领用全部可用分钟：记入已用、设定解锁截止时间戳，返回本次解锁分钟数

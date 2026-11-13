@@ -438,9 +438,9 @@ const APPEND_LIMIT = 60
 function settle(my) {
   const q = current.value
   const ok = isCorrect(q, my)
-  // 先学再看：每做一道题 +1 分钟观看时间（规则开启时）
+  // 先学再看：每做一道题记一次（前 20 道赚基础时间，之后每道 +1 分钟，规则开启时）
   const wr = getWatchRules()
-  if (wr.on && (wr.perQ || 0) > 0) addWatchEarned(wr.perQ)
+  if (wr.on) addWatchEarned(1)
   if (ok) {
     rightCount.value++
     feedback.value = 'right'

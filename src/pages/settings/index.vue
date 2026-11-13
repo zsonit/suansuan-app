@@ -90,15 +90,15 @@
       <view class="row">
         <view class="row-main">
           <text class="row-title">答题解锁观看时间</text>
-          <text class="row-desc">每天先送基础时间；用完后每做一道题 +1 分钟，做完就能接着看，到点自动拉回</text>
+          <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满基础时间，之后每做一道题再 +{{ watchRules.perQ || 1 }} 分钟，到点自动拉回</text>
         </view>
         <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
       </view>
       <template v-if="watchRules.on">
         <view class="row">
           <view class="row-main">
-            <text class="row-title">每天基础时间</text>
-            <text class="row-desc">每天白送的观看分钟数，跨天自动重置</text>
+            <text class="row-title">基础时间（做题赚）</text>
+            <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满这里的分钟数（每道约 {{ (watchRules.base / (watchRules.baseQ || 20)).toFixed(1) }} 分钟），跨天重置</text>
           </view>
           <view class="mini-pills">
             <view
@@ -115,7 +115,7 @@
         <view class="row">
           <view class="row-main">
             <text class="row-title">每题奖励</text>
-            <text class="row-desc">基础时间用完后，每做一道题 +{{ watchRules.perQ || 1 }} 分钟观看时间，不设上限</text>
+            <text class="row-desc">赚满基础时间后，每做一道题 +{{ watchRules.perQ || 1 }} 分钟观看时间，不设上限</text>
           </view>
         </view>
       </template>

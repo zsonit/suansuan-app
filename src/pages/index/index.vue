@@ -15,7 +15,7 @@
           <text class="watch-live-title">自由时间</text>
           <text class="watch-live-left">还剩 {{ unlockLeftMin }} 分钟</text>
         </view>
-        <text class="watch-live-pct">{{ watchUsed }}/{{ watchCap }} 分</text>
+        <text class="watch-live-pct">赚 {{ watchEarn }} 分</text>
       </view>
       <view class="watch-stats">
         <view class="watch-cell">
