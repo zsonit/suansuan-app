@@ -1,0 +1,8 @@
+{
+  "appId": "cn.zsonit.suansuan.parent",
+  "appName": "算算星球家长",
+  "webDir": "dist/build/h5",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "always" },
+  "server": { "androidScheme": "https" }
+}

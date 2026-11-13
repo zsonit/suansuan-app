@@ -1,0 +1,40 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "家长控制台"
+      }
+    },
+    {
+      "path": "pages/device/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "孩子设备"
+      }
+    },
+    {
+      "path": "pages/report/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "做题报告"
+      }
+    },
+    {
+      "path": "pages/me/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "关于"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "算算星球家长",
+    "navigationBarBackgroundColor": "#f7f5f2",
+    "backgroundColor": "#f7f5f2",
+    "backgroundColorTop": "#f7f5f2",
+    "backgroundColorBottom": "#f7f5f2"
+  }
+}

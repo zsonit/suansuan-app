@@ -1,0 +1,94 @@
+name: Build Parent App (Android & iOS)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'parent-app/**'
+      - '.github/workflows/build-parent.yml'
+  workflow_dispatch:
+
+jobs:
+  android-parent:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: parent-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: parent-app/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install deps & build H5
+        run: |
+          npm ci
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i "s/\"version\": \"[0-9.]*\"/\"version\": \"${VER}\"/" package.json
+          H5_BASE=./ npm run build:h5
+      - name: Bump version (auto per build)
+        run: |
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i "s/versionCode .*/versionCode ${GITHUB_RUN_NUMBER}/" android/app/build.gradle
+          sed -i "s/versionName .*/versionName \"${VER}\"/" android/app/build.gradle
+          echo "Parent Android version: ${GITHUB_RUN_NUMBER} (${VER})"
+      - name: Sync web assets to Android
+        run: npx cap sync android
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: suansuan-parent-android-apk
+          path: parent-app/android/app/build/outputs/apk/debug/app-debug.apk
+
+  ios-parent:
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: parent-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install deps & build H5
+        run: |
+          npm ci
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i '' "s/\"version\": \"[0-9.]*\"/\"version\": \"${VER}\"/" package.json
+          H5_BASE=./ npm run build:h5
+      - name: Bump version (auto per build)
+        run: |
+          VER="1.0.${GITHUB_RUN_NUMBER}"
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [0-9]*;/CURRENT_PROJECT_VERSION = ${GITHUB_RUN_NUMBER};/g" ios/App/App.xcodeproj/project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = [0-9.]*;/MARKETING_VERSION = ${VER};/g" ios/App/App.xcodeproj/project.pbxproj
+          echo "Parent iOS version: ${GITHUB_RUN_NUMBER} (${VER})"
+      - name: Sync web assets to iOS
+        run: npx cap sync ios
+      - name: Resolve SPM packages
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -resolvePackageDependencies
+      - name: Build unsigned .app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY=""
+      - name: Package unsigned ipa
+        run: |
+          mkdir -p ios/Payload
+          cp -r "ios/build/Build/Products/Debug-iphoneos/App.app" ios/Payload/
+          cd ios && zip -qry ../suansuan-parent-ios-unsigned.ipa Payload
+      - name: Upload ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: suansuan-parent-ios-unsigned-ipa
+          path: parent-app/suansuan-parent-ios-unsigned.ipa
