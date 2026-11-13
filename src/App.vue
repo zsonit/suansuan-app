@@ -9,7 +9,7 @@ export default {
   },
   async onShow() {
     // 先学再看：解锁时间到，无障碍服务把孩子拉回 App 时，
-    // 自动弹出「续时挑战」页（选题卡 → 答对 10 题 → 赢 10 分钟继续看）
+    // 强制进入挑战赛（10 道按年级随机题，做完才能继续看，做完还可继续挑战赚时间）
     try {
       const rules = getWatchRules()
       if (!rules.on) return
@@ -21,8 +21,10 @@ export default {
       if (!svc) return
       const pages = getCurrentPages()
       const cur = pages[pages.length - 1]
-      if (cur && cur.route && String(cur.route).indexOf('pages/breakin/index') > -1) return
-      uni.redirectTo({ url: '/pages/breakin/index' })
+      const route = cur && cur.route ? String(cur.route) : ''
+      // 已经在练习页/结果页就不打断（孩子正在做题，做的不算白做）
+      if (route.indexOf('pages/practice/index') > -1 || route.indexOf('pages/result/index') > -1) return
+      uni.redirectTo({ url: '/pages/practice/index?source=challenge&count=10' })
     } catch (e) {
       /* 静默失败，不影响正常使用 */
     }

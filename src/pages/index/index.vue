@@ -19,16 +19,33 @@
       </view>
       <view class="watch-stats">
         <view class="watch-cell">
-          <text class="watch-num">{{ watchUsed }}</text>
+          <text class="watch-num">{{ Math.round(watchUsed) }}</text>
           <text class="watch-label">今日已看(分钟)</text>
         </view>
         <view class="watch-cell">
-          <text class="watch-num">{{ watchLeft }}</text>
+          <text class="watch-num">{{ Math.round(watchLeft) }}</text>
           <text class="watch-label">还能看(分钟)</text>
         </view>
         <view class="watch-cell">
-          <text class="watch-num">{{ watchEarn }}</text>
+          <text class="watch-num">{{ Math.round(watchEarn) }}</text>
           <text class="watch-label">做题赚的(分钟)</text>
+        </view>
+      </view>
+      <!-- 两种赚时间的方式：每日任务（一天一次）/ 挑战赛（不限次） -->
+      <view class="watch-modes">
+        <view class="wm-card" :class="{ off: dailyP.claimed }" @click="startDaily">
+          <text class="wm-icon">📅</text>
+          <view class="wm-main">
+            <text class="wm-title">每日任务 · {{ wr.dailyQ }}题换{{ wr.dailyMin }}分钟</text>
+            <text class="wm-sub">{{ dailyP.claimed ? '今日已完成 ✓ 明天再来' : `已做 ${dailyP.done}/${wr.dailyQ} 题` }}</text>
+          </view>
+        </view>
+        <view class="wm-card" @click="startChallenge">
+          <text class="wm-icon">🏆</text>
+          <view class="wm-main">
+            <text class="wm-title">挑战赛 · {{ wr.chalQ }}题换{{ wr.chalMin }}分钟</text>
+            <text class="wm-sub">之后每题 +{{ wr.perQ }} 分钟 · 今日已做 {{ chalDone }} 题</text>
+          </view>
         </view>
       </view>
     </view>
@@ -193,7 +210,7 @@ import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable } from '@/common/store'
+import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone } from '@/common/store'
 
 const gradeSel = ref(1)
 const mode = ref('add')
@@ -323,17 +340,39 @@ onShow(() => {
   refreshWatch()
 })
 
-// 先学再看：观看时间卡（今日已看 / 还能看 / 做题赚的）
+// 先学再看：观看时间卡（今日已看 / 还能看 / 做题赚的 + 每日任务/挑战赛入口）
 const watchOn = ref(false)
 const watchUsed = ref(0)
 const watchEarn = ref(0)
 const watchLeft = ref(0)
+const wr = ref({ on: false, dailyQ: 30, dailyMin: 30, chalQ: 20, chalMin: 30, perQ: 1 })
+const dailyP = ref({ done: 0, need: 30, claimed: false })
+const chalDone = ref(0)
 function refreshWatch() {
   const r = getWatchRules()
   watchOn.value = !!r.on
+  wr.value = r
   watchUsed.value = getWatchUsed()
   watchEarn.value = getWatchEarned()
   watchLeft.value = watchAvailable()
+  dailyP.value = getDailyProgress()
+  chalDone.value = getChallengeDone()
+}
+
+// 每日任务 / 挑战赛入口：按当前年级随机出题
+function startDaily() {
+  if (dailyP.value.claimed) {
+    uni.showToast({ title: '今日每日任务已完成，明天再来', icon: 'none' })
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/practice/index?source=daily&count=${wr.value.dailyQ || 30}&grade=${gradeSel.value || 1}`
+  })
+}
+function startChallenge() {
+  uni.navigateTo({
+    url: `/pages/practice/index?source=challenge&count=${wr.value.chalQ || 20}&grade=${gradeSel.value || 1}`
+  })
 }
 
 // 自由时间倒计时横幅
@@ -482,6 +521,45 @@ function startGrade() {
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+.watch-modes {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+.wm-card {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: #ffffff;
+  border: 3rpx solid #ffe3cd;
+  border-radius: 20rpx;
+  padding: 18rpx 20rpx;
+}
+.wm-card:active {
+  background: #fff3e8;
+}
+.wm-card.off {
+  opacity: 0.55;
+}
+.wm-icon {
+  font-size: 40rpx;
+}
+.wm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.wm-title {
+  font-size: 27rpx;
+  font-weight: 800;
+  color: #332c26;
+}
+.wm-sub {
+  font-size: 22rpx;
+  color: #a08f80;
 }
 .watch-num {
   font-size: 40rpx;

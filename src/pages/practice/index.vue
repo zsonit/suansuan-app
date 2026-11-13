@@ -197,7 +197,7 @@ import { generate, generateForGrade, fromWrong } from '@/common/questions'
 import { lemiaoGenerate } from '@/common/lemiao'
 import { stagePointGenerate } from '@/common/stages'
 import { openGenerate } from '@/common/openbank'
-import { getSettings, addWrong, addRecord, saveResult, getWrong, getWatchRules, addWatchEarned } from '@/common/store'
+import { getSettings, addWrong, addRecord, saveResult, getWrong, getWatchRules, addDailyProgress, addChallengeProgress } from '@/common/store'
 import { sfx, speak, cheerRight, cheerWrong, CHEERS_STREAK } from '@/common/sound'
 
 // 骰子点阵：3x3 槽位（0-8）
@@ -295,6 +295,10 @@ onLoad((q) => {
     list.value = openGenerate(cfg.value.key, cfg.value.count)
   } else if (cfg.value.source === 'grade' && cfg.value.grade) {
     list.value = generateForGrade(cfg.value.grade, cfg.value.count)
+  } else if (cfg.value.source === 'daily' || cfg.value.source === 'challenge') {
+    // 先学再看：每日任务 / 挑战赛，按年级随机出题（不让孩子挑简单卡）
+    const g = cfg.value.grade || settings.value.grade || 1
+    list.value = generateForGrade(g, cfg.value.count)
   } else {
     list.value = generate(cfg.value.mode, cfg.value.difficulty, cfg.value.count)
   }
@@ -438,9 +442,12 @@ const APPEND_LIMIT = 60
 function settle(my) {
   const q = current.value
   const ok = isCorrect(q, my)
-  // 先学再看：每做一道题记一次（前 20 道赚基础时间，之后每道 +1 分钟，规则开启时）
+  // 先学再看：只有每日任务 / 挑战赛计时间（每做一道题记一次，规则开启时）
   const wr = getWatchRules()
-  if (wr.on) addWatchEarned(1)
+  if (wr.on) {
+    if (cfg.value.source === 'daily') addDailyProgress(1)
+    else if (cfg.value.source === 'challenge') addChallengeProgress(1)
+  }
   if (ok) {
     rightCount.value++
     feedback.value = 'right'
@@ -490,7 +497,7 @@ function finish() {
   tick = null
 
   const rec = {
-    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'open' ? `O_${cfg.value.key}` : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'point' ? `P_${cfg.value.key}${cfg.value.fun ? '_fun' : ''}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.mode,
+    mode: cfg.value.source === 'wrong' ? 'wrong' : cfg.value.source === 'open' ? `O_${cfg.value.key}` : cfg.value.source === 'grade' ? `grade${cfg.value.grade}` : cfg.value.source === 'point' ? `P_${cfg.value.key}${cfg.value.fun ? '_fun' : ''}` : cfg.value.source === 'lemiao' ? `L_${cfg.value.key}` : cfg.value.source === 'daily' ? 'daily' : cfg.value.source === 'challenge' ? 'challenge' : cfg.value.mode,
     total: total.value,
     right: rightCount.value,
     durationMs: elapsed.value * 1000,

@@ -90,32 +90,27 @@
       <view class="row">
         <view class="row-main">
           <text class="row-title">答题解锁观看时间</text>
-          <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满基础时间，之后每做一道题再 +{{ watchRules.perQ || 1 }} 分钟；时间到自动弹出 10 题续时挑战</text>
+          <text class="row-desc">题目按年级随机出，孩子不能挑简单卡；做多少题换多少时间，到点自动拉回</text>
         </view>
         <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
       </view>
       <template v-if="watchRules.on">
         <view class="row">
           <view class="row-main">
-            <text class="row-title">基础时间（做题赚）</text>
-            <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满这里的分钟数（每道约 {{ (watchRules.base / (watchRules.baseQ || 20)).toFixed(1) }} 分钟），跨天重置</text>
-          </view>
-          <view class="mini-pills">
-            <view
-              v-for="b in [10, 20, 30, 60]"
-              :key="b"
-              class="mpill"
-              :class="{ active: watchRules.base === b }"
-              @click="setWatch('base', b)"
-            >
-              {{ b }}分
-            </view>
+            <text class="row-title">📅 每日任务</text>
+            <text class="row-desc">每天 {{ watchRules.dailyQ || 30 }} 道题换 {{ watchRules.dailyMin || 30 }} 分钟，每天只能完成一次，跨天重置</text>
           </view>
         </view>
         <view class="row">
           <view class="row-main">
-            <text class="row-title">每题奖励</text>
-            <text class="row-desc">赚满基础时间后，每做一道题 +{{ watchRules.perQ || 1 }} 分钟观看时间，不设上限</text>
+            <text class="row-title">🏆 挑战赛</text>
+            <text class="row-desc">前 {{ watchRules.chalQ || 20 }} 道题换 {{ watchRules.chalMin || 30 }} 分钟；之后每做一道题 +{{ watchRules.perQ || 1 }} 分钟，不限次数，可随时退出去看</text>
+          </view>
+        </view>
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">⏰ 时间到强制挑战</text>
+            <text class="row-desc">观看时间用完被拉回后，强制做 10 道题才能继续看，做完可接着挑战赚时间</text>
           </view>
         </view>
       </template>

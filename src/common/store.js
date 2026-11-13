@@ -152,10 +152,13 @@ export function takeResult() {
   return r
 }
 
-/* ---------------- 先学再看（答题解锁观看时间） ---------------- */
-// 规则：每天先做 baseQ 道题，赚满 base 分钟基础时间（每道 base/baseQ 分钟）；
-//       赚满后每做一道题再 +perQ 分钟；不设固定上限。时间不是白送的，全靠做题赚。
-const DEFAULT_WATCH_RULES = { on: false, base: 30, baseQ: 20, perQ: 1 }
+/* ---------------- 先学再看（答题解锁观看时间） ----------------
+   两种赚时间的方式（题目都按年级随机出，防挑简单卡投机取巧）：
+   1) 每日任务：每天做 dailyQ 道题换 dailyMin 分钟，每天只能完成一次
+   2) 挑战赛：前 chalQ 道换 chalMin 分钟（每道 chalMin/chalQ 渐进发放，做满正好 chalMin），
+      之后每做一道 +perQ 分钟，不限次数，可随时退出用已赚的时间
+   观看时间到被拉回：强制再做 10 道题（按挑战赛计分）才能继续看 */
+const DEFAULT_WATCH_RULES = { on: false, dailyQ: 30, dailyMin: 30, chalQ: 20, chalMin: 30, perQ: 1 }
 
 export function getWatchRules() {
   return Object.assign({}, DEFAULT_WATCH_RULES, read(K.watchRules, {}))
@@ -167,11 +170,21 @@ export function saveWatchRules(patch) {
   return next
 }
 
-// 今日观看账户（跨天自动清零）：used=已领用(已看)分钟，earned=做题赚的分钟
+// 今日观看账户（跨天自动清零）：
+// used=已领用(已看)分钟 earned=赚的分钟 dailyDone/dailyClaimed=每日任务进度 chalDone=挑战赛今日已做题数
 function todayWatch() {
   const s = read(K.watchState, null) || {}
-  if (s.date !== dayKey()) return { date: dayKey(), used: 0, earned: 0 }
-  return { date: s.date, used: s.used || 0, earned: s.earned || 0 }
+  if (s.date !== dayKey()) {
+    return { date: dayKey(), used: 0, earned: 0, dailyDone: 0, dailyClaimed: false, chalDone: 0 }
+  }
+  return {
+    date: s.date,
+    used: s.used || 0,
+    earned: s.earned || 0,
+    dailyDone: s.dailyDone || 0,
+    dailyClaimed: !!s.dailyClaimed,
+    chalDone: s.chalDone || 0
+  }
 }
 
 export function getWatchUsed() {
@@ -182,43 +195,52 @@ export function getWatchEarned() {
   return todayWatch().earned
 }
 
-// 每做一道题调用一次：n = 本次做的题数
-// 阶段一（还没赚满基础时间）：每道题赚 base/baseQ 分钟，最多累计到 base
-// 阶段二（已赚满基础时间）：每道题 +perQ 分钟
-export function addWatchEarned(n) {
+// 每日任务：每做一道题记一次；做满 dailyQ 道自动发 dailyMin 分钟（每天只发一次）
+export function addDailyProgress(n) {
   const r = getWatchRules()
   const s = todayWatch()
-  const base = r.base || 0
-  const perBase = base / Math.max(1, r.baseQ || 20)
-  let cnt = n || 1
-  while (cnt-- > 0) {
-    if (base > 0 && s.earned < base) {
-      s.earned = Math.min(base, s.earned + perBase)
-    } else {
-      s.earned += r.perQ || 1
-    }
+  s.dailyDone += n || 1
+  if (!s.dailyClaimed && s.dailyDone >= (r.dailyQ || 30)) {
+    s.dailyClaimed = true
+    s.earned += r.dailyMin || 30
   }
   write(K.watchState, s)
-  return s.earned
+  return { done: s.dailyDone, claimed: s.dailyClaimed }
 }
 
-// 还能看 = max(0, 赚的 - 已看)（基础时间也是做题赚来的，不是白送的）
-export function watchAvailable() {
-  const s = todayWatch()
-  return Math.max(0, s.earned - s.used)
-}
-
-// 基础时间进度（供 UI 展示）：done=已完成题数 need=还差几道题赚满
-export function watchBaseProgress() {
+export function getDailyProgress() {
   const r = getWatchRules()
   const s = todayWatch()
-  const base = r.base || 0
-  const perBase = base / Math.max(1, r.baseQ || 20)
-  if (base <= 0 || s.earned >= base) {
-    return { phase: 2, done: r.baseQ || 20, need: 0, perBase }
+  return {
+    done: s.dailyDone,
+    need: Math.max(0, (r.dailyQ || 30) - s.dailyDone),
+    claimed: s.dailyClaimed
   }
-  const done = Math.min(r.baseQ || 20, Math.floor(s.earned / perBase + 1e-6))
-  return { phase: 1, done, need: Math.ceil((base - s.earned) / perBase - 1e-6), perBase }
+}
+
+// 挑战赛：每做一道题记一次；前 chalQ 道渐进发满 chalMin 分钟，之后每道 +perQ 分钟
+export function addChallengeProgress(n) {
+  const r = getWatchRules()
+  const s = todayWatch()
+  const chalQ = r.chalQ || 20
+  let cnt = n || 1
+  while (cnt-- > 0) {
+    s.chalDone++
+    if (s.chalDone <= chalQ) s.earned += (r.chalMin || 30) / chalQ
+    else s.earned += r.perQ || 1
+  }
+  write(K.watchState, s)
+  return { done: s.chalDone }
+}
+
+export function getChallengeDone() {
+  return todayWatch().chalDone
+}
+
+// 还能看 = max(0, 赚的 - 已看)，向下取整为整分钟
+export function watchAvailable() {
+  const s = todayWatch()
+  return Math.max(0, Math.floor(s.earned - s.used))
 }
 
 // 领用全部可用分钟：记入已用、设定解锁截止时间戳，返回本次解锁分钟数

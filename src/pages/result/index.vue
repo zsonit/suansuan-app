@@ -48,6 +48,9 @@
       <view class="reward-btn" v-if="reward.can" @click="claimReward">
         去玩吧 · 解锁 {{ reward.minutes }} 分钟
       </view>
+      <view class="reward-btn alt" v-if="reward.can && res.source === 'challenge'" @click="keepChallenge">
+        继续挑战 · 每题再 +{{ getWatchRules().perQ || 1 }} 分钟
+      </view>
     </view>
 
     <view class="actions">
@@ -61,7 +64,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { takeResult, getSettings, getWatchRules, watchAvailable, watchBaseProgress, claimWatch } from '@/common/store'
+import { takeResult, getSettings, getWatchRules, watchAvailable, getWatchEarned, getDailyProgress, getChallengeDone, claimWatch } from '@/common/store'
 import { fmtDuration, exprText } from '@/common/questions'
 import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
 import { isServiceOn, startUnlock } from '@/common/kiosk'
@@ -115,12 +118,35 @@ async function calcReward() {
   const rules = getWatchRules()
   if (!rules.on) return
   const avail = watchAvailable()
+  const src = res.value.source
+  if (src === 'daily') {
+    // 每日任务：做完 dailyQ 道自动 +dailyMin 分钟
+    const p = getDailyProgress()
+    reward.value = p.claimed && avail > 0
+      ? { can: true, minutes: avail, desc: `每日任务完成！+${rules.dailyMin || 30} 分钟，现在能看 ${avail} 分钟` }
+      : { can: avail > 0, minutes: avail, desc: `每日任务还差 ${p.need} 道题，做完就能 +${rules.dailyMin || 30} 分钟` }
+    return
+  }
+  if (src === 'challenge') {
+    // 挑战赛：前 chalQ 道换 chalMin 分钟，之后每题 +perQ 分钟，可继续挑战
+    const done = getChallengeDone()
+    const chalQ = rules.chalQ || 20
+    reward.value = {
+      can: avail > 0,
+      minutes: avail,
+      desc:
+        done > chalQ
+          ? `挑战赛已做 ${done} 题，今天共赚 ${Math.round(getWatchEarned())} 分钟，能看 ${avail} 分钟`
+          : `挑战赛进行中 ${done}/${chalQ} 题，赚满 ${rules.chalMin || 30} 分钟后每题再 +${rules.perQ || 1} 分钟`
+    }
+    return
+  }
   if (avail <= 0) {
-    const p = watchBaseProgress()
-    const rules = getWatchRules()
-    reward.value = p.phase === 1
-      ? { can: false, minutes: 0, desc: `再做 ${p.need} 道题就能赚满 ${rules.base} 分钟观看时间，加油！` }
-      : { can: false, minutes: 0, desc: '时间用完啦，每做一道题就能再赚 1 分钟，快去练习吧！' }
+    reward.value = {
+      can: false,
+      minutes: 0,
+      desc: '观看时间用完啦，回首页做「每日任务」或「挑战赛」赚时间吧！'
+    }
     return
   }
   reward.value = {
@@ -128,6 +154,12 @@ async function calcReward() {
     minutes: avail,
     desc: `可以看 ${avail} 分钟，时间到会自动回来说「再做一组」`
   }
+}
+
+// 挑战赛：继续做一批（每题 +1 分钟），做完回这里领
+function keepChallenge() {
+  const g = res.value.grade || settings.value.grade || 1
+  uni.redirectTo({ url: `/pages/practice/index?source=challenge&count=10&grade=${g}` })
 }
 
 async function claimReward() {
@@ -147,6 +179,16 @@ function again() {
   const r = res.value
   if (r.source === 'wrong') {
     uni.redirectTo({ url: '/pages/practice/index?source=wrong&count=10' })
+    return
+  }
+  if (r.source === 'daily') {
+    uni.redirectTo({
+      url: `/pages/practice/index?source=daily&count=${r.count || 30}&grade=${r.grade || 1}`
+    })
+    return
+  }
+  if (r.source === 'challenge') {
+    keepChallenge()
     return
   }
   if (r.source === 'game' && r.game) {
@@ -344,6 +386,12 @@ function goHome() {
   font-weight: 800;
   border-radius: 100rpx;
   box-shadow: 0 12rpx 28rpx rgba(47, 191, 135, 0.35);
+}
+.reward-btn.alt {
+  background: #ffffff;
+  color: #ff7a3d;
+  border: 3rpx solid #ffc9a6;
+  box-shadow: none;
 }
 
 .wrong-box {
