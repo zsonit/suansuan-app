@@ -90,7 +90,7 @@
       <view class="row">
         <view class="row-main">
           <text class="row-title">答题解锁观看时间</text>
-          <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满基础时间，之后每做一道题再 +{{ watchRules.perQ || 1 }} 分钟，到点自动拉回</text>
+          <text class="row-desc">每天先做 {{ watchRules.baseQ || 20 }} 道题赚满基础时间，之后每做一道题再 +{{ watchRules.perQ || 1 }} 分钟；时间到自动弹出 10 题续时挑战</text>
         </view>
         <switch :checked="watchRules.on" color="#FF7A3D" @change="onWatchSwitch" />
       </view>
