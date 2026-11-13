@@ -65,7 +65,7 @@
       <view class="row">
         <view class="row-main">
           <text class="row-title">自动拉回练习界面</text>
-          <text class="row-desc">开启后无论退到桌面还是其他应用，都会自动回到算算星球，关闭需要密码</text>
+          <text class="row-desc">开启后无论退到桌面还是其他应用，都会自动回到算算星球；省电模式、待机、锁屏状态下同样有效，关闭需要密码</text>
         </view>
         <switch :checked="kioskOn" color="#FF7A3D" @change="onKiosk" />
       </view>
@@ -82,6 +82,43 @@
           <text class="row-desc">需要输入锁定密码，忘记密码可用恢复码或安全问题找回</text>
         </view>
         <text class="row-chev">›</text>
+      </view>
+    </view>
+
+    <!-- 任何模式下都能弹回：系统权限（省电、待机、锁屏） -->
+    <view class="group" v-if="kioskOn">
+      <view class="group-title">任何模式都能弹回 · 系统权限</view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">忽略电池优化（省电模式）</text>
+          <text class="row-desc">不加入白名单的话，省电模式或后台待机时可能拉不回来</text>
+        </view>
+        <view class="perm-btn" :class="{ ok: power.batteryIgnored }" @click="goBattery">
+          {{ power.batteryIgnored ? '已开启 ✓' : '去开启' }}
+        </view>
+      </view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">悬浮窗 / 允许后台弹出</text>
+          <text class="row-desc">Android 10 以后限制后台启动应用，给这个权限才能随时弹到最前</text>
+        </view>
+        <view class="perm-btn" :class="{ ok: power.overlay }" @click="goOverlay">
+          {{ power.overlay ? '已开启 ✓' : '去开启' }}
+        </view>
+      </view>
+      <view class="row" @click="goAutoStart">
+        <view class="row-main">
+          <text class="row-title">自启动 / 后台运行</text>
+          <text class="row-desc">小米、华为、OPPO、vivo 等手机建议把算算星球设为允许自启动，否则被杀掉后不弹</text>
+        </view>
+        <text class="row-chev">›</text>
+      </view>
+      <view class="row" @click="refreshPower" v-if="!power.batteryIgnored || !power.overlay">
+        <view class="row-main">
+          <text class="row-title warn">⚠ 还有权限没开</text>
+          <text class="row-desc">设置完回来点这里刷新状态；开着省电模式也能正常弹回了</text>
+        </view>
+        <text class="row-chev">↻</text>
       </view>
     </view>
 
@@ -262,7 +299,8 @@ import { sfx, speak } from '@/common/sound'
 import {
   QUESTIONS, getConfig, saveConfig, setEnabled, isEnabled, isServiceOn,
   openAccessibilitySettings, verifyPin, verifyAnswer, verifyPhone,
-  sha256, lockoutLeft, addWrongAttempt, resetAttempts
+  sha256, lockoutLeft, addWrongAttempt, resetAttempts,
+  getPowerStatus, openBatterySettings, openOverlaySettings, openAutoStartSettings
 } from '@/common/kiosk'
 
 const goals = [10, 20, 30, 50]
@@ -272,6 +310,8 @@ const eyeCare = computed(() => settings.value.eyeCare)
 // ===== 专注锁定 =====
 const kioskOn = ref(false)
 const serviceOn = ref(false)
+// 系统权限：忽略电池优化 / 悬浮窗（后台弹出）
+const power = ref({ batteryIgnored: true, overlay: true })
 const cfg = ref(null)
 const overlay = ref(null) // null | 'setup' | 'unlock'
 const setupStep = ref(1)
@@ -297,7 +337,22 @@ onShow(async () => {
   kioskOn.value = await isEnabled()
   serviceOn.value = await isServiceOn()
   cfg.value = await getConfig()
+  power.value = await getPowerStatus()
 })
+
+// ===== 系统权限：任何模式（省电/待机/锁屏）都能弹回 =====
+async function goBattery() {
+  await openBatterySettings()
+}
+async function goOverlay() {
+  await openOverlaySettings()
+}
+async function goAutoStart() {
+  await openAutoStartSettings()
+}
+async function refreshPower() {
+  power.value = await getPowerStatus()
+}
 
 function setGoal(g) {
   settings.value = saveSettings({ dailyGoal: g })
@@ -751,6 +806,24 @@ function back() {
 }
 .row.danger .row-title {
   color: #ff6b6b;
+}
+/* 系统权限按钮：未开启=橙色「去开启」，已开启=绿色打勾 */
+.perm-btn {
+  flex: none;
+  margin-left: 16rpx;
+  padding: 10rpx 22rpx;
+  border-radius: 100rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #ff9a5c, #ff7a3d);
+  box-shadow: 0 6rpx 16rpx rgba(255, 122, 61, 0.28);
+  white-space: nowrap;
+}
+.perm-btn.ok {
+  color: #2fbf87;
+  background: #e8faf1;
+  box-shadow: none;
 }
 
 .foot {

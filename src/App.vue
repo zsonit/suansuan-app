@@ -1,6 +1,6 @@
 <script>
 import { getSettings, getWatchRules, getUnlockUntil } from '@/common/store'
-import { isServiceOn } from '@/common/kiosk'
+import { isServiceOn, takeForceChallenge } from '@/common/kiosk'
 
 export default {
   onLaunch() {
@@ -13,17 +13,25 @@ export default {
     try {
       const rules = getWatchRules()
       if (!rules.on) return
+      const pages = getCurrentPages()
+      const cur = pages[pages.length - 1]
+      const route = cur && cur.route ? String(cur.route) : ''
+      // 已经在练习页/结果页就不打断（孩子正在做题，做的不算白做）
+      if (route.indexOf('pages/practice/index') > -1 || route.indexOf('pages/result/index') > -1) return
+
+      // 无障碍服务拉起时写了强制挑战标记：省电模式/进程被杀重启后同样生效
+      const forced = await takeForceChallenge()
+      if (forced) {
+        uni.redirectTo({ url: '/pages/practice/index?source=challenge&count=10' })
+        return
+      }
+
       const until = getUnlockUntil()
       if (!until) return
       const now = Date.now()
       if (until > now || now - until > 5 * 60 * 1000) return // 未到期或早就过期的不弹
       const svc = await isServiceOn()
       if (!svc) return
-      const pages = getCurrentPages()
-      const cur = pages[pages.length - 1]
-      const route = cur && cur.route ? String(cur.route) : ''
-      // 已经在练习页/结果页就不打断（孩子正在做题，做的不算白做）
-      if (route.indexOf('pages/practice/index') > -1 || route.indexOf('pages/result/index') > -1) return
       uni.redirectTo({ url: '/pages/practice/index?source=challenge&count=10' })
     } catch (e) {
       /* 静默失败，不影响正常使用 */

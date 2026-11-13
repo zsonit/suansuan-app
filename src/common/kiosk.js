@@ -76,6 +76,53 @@ export async function openAccessibilitySettings() {
   if (p) await p.openAccessibilitySettings()
 }
 
+/* ---------------- 任何模式都能弹回：系统权限 ---------------- */
+// 查询：忽略电池优化（省电模式/Doze）、悬浮窗（后台弹出界面）
+export async function getPowerStatus() {
+  const p = cap()
+  if (!p) return { batteryIgnored: true, overlay: true, sdk: 0 }
+  try {
+    const r = await p.powerStatus()
+    return {
+      batteryIgnored: !!(r && r.batteryIgnored),
+      overlay: !!(r && r.overlay),
+      sdk: (r && r.sdk) || 0
+    }
+  } catch (e) {
+    return { batteryIgnored: true, overlay: true, sdk: 0 }
+  }
+}
+
+// 申请忽略电池优化（省电模式 / 后台限制下依然能定时拉回）
+export async function openBatterySettings() {
+  const p = cap()
+  if (p) await p.openBatterySettings()
+}
+
+// 申请悬浮窗权限（允许后台弹出界面，Android 10+ 后台启动限制的关键豁免）
+export async function openOverlaySettings() {
+  const p = cap()
+  if (p) await p.openOverlaySettings()
+}
+
+// 国产 ROM 的自启动 / 后台运行管理页
+export async function openAutoStartSettings() {
+  const p = cap()
+  if (p) await p.openAutoStartSettings()
+}
+
+// 取出并清除「强制挑战」标记（被无障碍服务拉回时写入，重启后仍有效）
+export async function takeForceChallenge() {
+  const p = cap()
+  if (!p) return false
+  try {
+    const r = await p.takeForceChallenge()
+    return !!(r && r.force)
+  } catch (e) {
+    return false
+  }
+}
+
 // 回到桌面（让孩子去看视频）
 export async function goHome() {
   const p = cap()
