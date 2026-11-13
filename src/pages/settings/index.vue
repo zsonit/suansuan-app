@@ -178,9 +178,31 @@
 
         <!-- ====== 解锁流程 ====== -->
         <template v-else-if="overlay === 'unlock'">
-          <text class="sheet-title">{{ unlockPurpose === 'enable' ? '输入密码开启' : unlockPurpose === 'watch' ? '输入密码修改规则' : unlockPurpose === 'reset' ? '修改密码 / 关闭锁定' : '关闭专注锁定' }}</text>
+          <text class="sheet-title">{{ unlockPurpose === 'enable' ? '输入密码开启' : unlockPurpose === 'watch' ? '输入密码修改规则' : unlockPurpose === 'reset' ? '修改密码 / 关闭锁定' : '彻底关闭专注锁定' }}</text>
 
-          <template v-if="!forgotMode">
+          <!-- 关闭锁定：双重验证（先答安全问题，再输密码） -->
+          <template v-if="unlockPurpose === 'disable' && !forgotMode">
+            <template v-if="closeStep === 'answer'">
+              <text class="sheet-desc">彻底关闭需要双重验证。请先回答安全问题：{{ (cfg && cfg.question) || '开启时设置的问题' }}</text>
+              <input class="pin-input" v-model="closeAnswer" placeholder="安全问题答案 / 手机号" />
+              <text class="err" v-if="closeErr">{{ closeErr }}</text>
+              <view class="sheet-btns">
+                <view class="sbtn ghost" @click="cancelOverlay">取消</view>
+                <view class="sbtn" @click="closeAnswerNext">下一步</view>
+              </view>
+            </template>
+            <template v-else>
+              <text class="sheet-desc">✅ 答案正确，最后输入锁定密码</text>
+              <input class="pin-input" type="number" :password="true" maxlength="6" v-model="unlockPin" placeholder="锁定密码" />
+              <text class="err" v-if="closeErr">{{ closeErr }}</text>
+              <view class="sheet-btns">
+                <view class="sbtn ghost" @click="closeStep = 'answer'">上一步</view>
+                <view class="sbtn danger" @click="closeFinal">关闭锁定</view>
+              </view>
+            </template>
+          </template>
+
+          <template v-else-if="!forgotMode">
             <text class="sheet-desc">输入锁定密码</text>
             <input class="pin-input" type="number" :password="true" maxlength="6" v-model="unlockPin" placeholder="锁定密码" @confirm="submitUnlock" />
             <text class="err" v-if="unlockErr">{{ unlockErr }}</text>
@@ -221,10 +243,9 @@
           </template>
 
           <template v-else-if="forgotMode === 'verified'">
-            <text class="sheet-desc">✅ 身份验证通过，可以重置密码或直接关闭锁定</text>
+            <text class="sheet-desc">✅ 身份验证通过，可以重置密码（关闭锁定请回上一级走「答案 + 密码」双重验证）</text>
             <view class="sheet-btns col">
               <view class="sbtn" @click="startResetFromForgot">重置密码</view>
-              <view class="sbtn danger" @click="disableKiosk">关闭锁定</view>
             </view>
           </template>
         </template>
@@ -266,6 +287,10 @@ const unlockErr = ref('')
 const forgotMode = ref(null) // null | choose | recovery | answer | verified
 const recoveryIn = ref('')
 const answerIn = ref('')
+// 彻底关闭锁定：两步验证（安全问题答案 → 锁定密码）
+const closeStep = ref('answer') // answer | pin
+const closeAnswer = ref('')
+const closeErr = ref('')
 
 onShow(async () => {
   settings.value = getSettings()
@@ -359,11 +384,15 @@ async function onKiosk(e) {
       startSetup()
     }
   } else {
+    // 彻底关闭锁定：必须「安全问题答案 + 锁定密码」双重验证，孩子知道密码也关不掉
     unlockPurpose.value = 'disable'
     overlay.value = 'unlock'
     forgotMode.value = null
     unlockPin.value = ''
     unlockErr.value = ''
+    closeStep.value = 'answer'
+    closeAnswer.value = ''
+    closeErr.value = ''
   }
   // switch 显示状态以 kioskOn 为准，先弹回去
   setTimeout(refreshKiosk, 0)
@@ -453,6 +482,9 @@ function openUnlock(purpose) {
   unlockErr.value = ''
   recoveryIn.value = ''
   answerIn.value = ''
+  closeStep.value = 'answer'
+  closeAnswer.value = ''
+  closeErr.value = ''
   resetAttempts()
 }
 
@@ -482,8 +514,58 @@ async function submitUnlock() {
   applyUnlock()
 }
 
-async function submitRecovery() {
+// 关闭锁定第一步：核对安全问题答案（也接受手机号）
+async function closeAnswerNext() {
+  const left = lockoutLeft()
+  if (left > 0) {
+    closeErr.value = '错误次数过多，请 ' + Math.ceil(left / 60000) + ' 分钟后再试'
+    return
+  }
   const c = cfg.value
+  if (!c) {
+    closeErr.value = '未找到锁定配置'
+    return
+  }
+  const ok = (await verifyAnswer(c, closeAnswer.value)) || (await verifyPhone(c, closeAnswer.value))
+  if (!ok) {
+    const n = addWrongAttempt()
+    closeErr.value = n >= 5 ? '错误次数过多，已锁定 5 分钟' : '答案不对（第 ' + n + ' 次错误）'
+    closeAnswer.value = ''
+    return
+  }
+  resetAttempts()
+  closeAnswer.value = ''
+  closeErr.value = ''
+  closeStep.value = 'pin' // 进入第二步输密码
+}
+
+// 关闭锁定第二步：锁定密码正确才真正关闭
+async function closeFinal() {
+  const left = lockoutLeft()
+  if (left > 0) {
+    closeErr.value = '错误次数过多，请 ' + Math.ceil(left / 60000) + ' 分钟后再试'
+    return
+  }
+  const c = cfg.value
+  if (!c || !(await verifyPin(c, unlockPin.value))) {
+    const n = addWrongAttempt()
+    closeErr.value = n >= 5 ? '错误次数过多，已锁定 5 分钟' : '密码不对（第 ' + n + ' 次错误）'
+    unlockPin.value = ''
+    return
+  }
+  resetAttempts()
+  unlockPin.value = ''
+  disposeUnlock()
+}
+
+// 双重验证通过后才关闭（不经过通用 applyUnlock，避免绕过第一步）
+async function disposeUnlock() {
+  await disableKiosk()
+  closeErr.value = ''
+  closeStep.value = 'answer'
+}
+
+async function submitRecovery() {  const c = cfg.value
   if (!c || !(await verifyPhone(c, recoveryIn.value))) {
     unlockErr.value = '手机号不对'
     recoveryIn.value = ''
@@ -519,9 +601,8 @@ function applyUnlock() {
   } else if (unlockPurpose.value === 'watch') {
     applyWatchPending()
     overlay.value = null
-  } else {
-    disableKiosk()
   }
+  // disable 不走这里：必须经 closeFinal 完成「答案 + 密码」双重验证
 }
 
 async function disableKiosk() {

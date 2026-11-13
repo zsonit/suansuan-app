@@ -61,6 +61,12 @@
         <text class="row-val">5 分钟 ~ 2 小时</text>
         <text class="row-chev">›</text>
       </view>
+      <view class="row danger" v-if="kioskOn" @click="openClose">
+        <text class="row-icon">🚫</text>
+        <text class="row-text">彻底关闭专注锁定</text>
+        <text class="row-val">需答案 + 密码</text>
+        <text class="row-chev">›</text>
+      </view>
       <view class="row" @click="goSettings">
         <text class="row-icon">⚙️</text>
         <text class="row-text">练习设置</text>
@@ -142,6 +148,36 @@
         <text class="gate-cancel" @click="tempOpen = false">取消</text>
       </template>
     </view>
+
+    <!-- 彻底关闭专注锁定：双重验证（安全问题答案 → 锁定密码） -->
+    <view class="gate" v-if="closeOpen">
+      <text class="gate-icon">🚫</text>
+      <text class="gate-title">彻底关闭专注锁定</text>
+
+      <template v-if="closeStep === 'answer'">
+        <text class="gate-desc">第一步：{{ closeQ || '请回答开启时设置的安全问题' }}</text>
+        <input class="gate-input" v-model="closeAnswer" placeholder="安全问题答案 / 手机号" />
+        <text class="gate-err" v-if="closeErr">{{ closeErr }}</text>
+        <text class="gate-sub">答案对了还要输密码，孩子知道密码也关不掉</text>
+        <view class="gate-btn danger" @click="closeAnswerNext">下一步</view>
+        <text class="gate-cancel" @click="closeOpen = false">取消</text>
+      </template>
+
+      <template v-else>
+        <text class="gate-desc">第二步：✅ 答案正确，再输入锁定密码</text>
+        <input
+          class="gate-input"
+          type="number"
+          :password="true"
+          maxlength="6"
+          v-model="closePin"
+          placeholder="6 位锁定密码"
+        />
+        <text class="gate-err" v-if="closeErr">{{ closeErr }}</text>
+        <view class="gate-btn danger" @click="closeFinal">确认关闭锁定</view>
+        <text class="gate-cancel" @click="closeStep = 'answer'">上一步</text>
+      </template>
+    </view>
   </view>
 </template>
 
@@ -149,7 +185,7 @@
 import { ref, computed } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getStats, getToday, getStreak, getWrong, getSettings, saveSettings, getHistory, getWatchRules, getWatchUsed, watchAvailable } from '@/common/store'
-import { getConfig, verifyPin, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts, isEnabled, startUnlock } from '@/common/kiosk'
+import { getConfig, verifyPin, verifyAnswer, verifyPhone, gateOpen, gatePass, gateNeeded, lockoutLeft, addWrongAttempt, resetAttempts, isEnabled, setEnabled, startUnlock } from '@/common/kiosk'
 
 const stats = ref({ total: 0, right: 0, days: {} })
 const today = ref({ n: 0, right: 0 })
@@ -221,6 +257,7 @@ async function gateSubmit() {
 }
 
 onShow(async () => {
+  kioskOn.value = await isEnabled()
   const need = await gateNeeded()
   gated.value = need && !gateOpen()
   if (gated.value) {
@@ -240,6 +277,72 @@ onShow(async () => {
   watchUsed.value = getWatchUsed()
   watchLeft.value = watchAvailable()
 })
+
+// ===== 彻底关闭专注锁定（安全问题答案 + 锁定密码，双重验证） =====
+const kioskOn = ref(false)
+const closeOpen = ref(false)
+const closeStep = ref('answer')
+const closeQ = ref('')
+const closeAnswer = ref('')
+const closePin = ref('')
+const closeErr = ref('')
+
+async function openClose() {
+  const cfg = await getConfig()
+  if (!cfg || !cfg.pinHash) {
+    uni.showToast({ title: '当前没有开启专注锁定', icon: 'none' })
+    return
+  }
+  closeQ.value = cfg.question || '开启时设置的安全问题'
+  closeStep.value = 'answer'
+  closeAnswer.value = ''
+  closePin.value = ''
+  closeErr.value = ''
+  closeOpen.value = true
+}
+
+async function closeAnswerNext() {
+  const left = lockoutLeft()
+  if (left > 0) {
+    closeErr.value = `错太多次了，${Math.ceil(left / 1000)} 秒后再试`
+    return
+  }
+  const cfg = await getConfig()
+  const ok = (await verifyAnswer(cfg, closeAnswer.value)) || (await verifyPhone(cfg, closeAnswer.value))
+  if (!ok) {
+    addWrongAttempt()
+    const l2 = lockoutLeft()
+    closeErr.value = l2 > 0 ? '连错 5 次，锁定 5 分钟' : '答案不对，再想想'
+    closeAnswer.value = ''
+    return
+  }
+  resetAttempts()
+  closeAnswer.value = ''
+  closeErr.value = ''
+  closeStep.value = 'pin'
+}
+
+async function closeFinal() {
+  const left = lockoutLeft()
+  if (left > 0) {
+    closeErr.value = `错太多次了，${Math.ceil(left / 1000)} 秒后再试`
+    return
+  }
+  const cfg = await getConfig()
+  if (!(await verifyPin(cfg, closePin.value))) {
+    addWrongAttempt()
+    const l2 = lockoutLeft()
+    closeErr.value = l2 > 0 ? '连错 5 次，锁定 5 分钟' : '密码不对，再想想'
+    closePin.value = ''
+    return
+  }
+  resetAttempts()
+  await setEnabled(false)
+  kioskOn.value = false
+  closeOpen.value = false
+  closePin.value = ''
+  uni.showToast({ title: '已关闭专注锁定', icon: 'success' })
+}
 
 // ===== 家长临时解锁（临时放行，不等于关闭锁定） =====
 const TEMP_OPTS = [5, 10, 15, 30, 60, 120]
@@ -540,6 +643,13 @@ function about() {
 .row-chev {
   font-size: 38rpx;
   color: #d9c8b8;
+}
+.row.danger .row-text {
+  color: #c94b4b;
+}
+.gate-btn.danger {
+  background: linear-gradient(135deg, #f4675f, #d9483f);
+  box-shadow: 0 12rpx 28rpx rgba(217, 72, 63, 0.28);
 }
 
 .foot {
