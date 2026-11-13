@@ -145,6 +145,24 @@ public class KioskPlugin extends Plugin {
         call.resolve();
     }
 
+    /** 家长远程「立即锁定」：清除解锁期 + 撤销到点闹钟 + 把本 App 拉回前台 */
+    @PluginMethod
+    public void lockNow(PluginCall call) {
+        suspendUntil = 0L;
+        sp().edit().putLong("unlock_until", 0L).apply();
+        cancelAlarm();
+        try {
+            Intent i = getContext().getPackageManager().getLaunchIntentForPackage(getContext().getPackageName());
+            if (i != null) {
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                getContext().startActivity(i);
+            }
+        } catch (Exception e) {
+            // 拉回失败时还有无障碍服务巡检兜底
+        }
+        call.resolve();
+    }
+
     @PluginMethod
     public void openAccessibilitySettings(PluginCall call) {
         Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);

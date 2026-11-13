@@ -68,6 +68,7 @@ import { takeResult, getSettings, getWatchRules, watchAvailable, getWatchEarned,
 import { fmtDuration, exprText } from '@/common/questions'
 import { sfx, speak, CHEERS_END_GOOD, CHEERS_END } from '@/common/sound'
 import { isServiceOn, startUnlock } from '@/common/kiosk'
+import { reportSession } from '@/common/remote'
 
 const settings = ref(getSettings())
 const res = ref({ total: 0, right: 0, durationMs: 0, wrong: [], mode: 'add', difficulty: 1, count: 10 })
@@ -100,6 +101,17 @@ onLoad(async () => {
   settings.value = getSettings()
   const r = takeResult()
   if (r) res.value = Object.assign(res.value, r)
+  // 家长远程控制：把这次做题报告同步到云端（失败静默，不影响本地）
+  if (res.value.total) {
+    reportSession({
+      source: res.value.source || res.value.mode,
+      total: res.value.total,
+      right: res.value.right,
+      durationMs: res.value.durationMs,
+      grade: res.value.grade,
+      wrong: res.value.wrong || []
+    })
+  }
   // 结算音效 + 语音鼓励
   if (acc.value >= 90) {
     sfx('win')

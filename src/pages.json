@@ -90,6 +90,14 @@
         "navigationBarTitleText": "翻牌记忆",
         "disableScroll": true
       }
+    },
+    {
+      "path": "pages/remote/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "家长远程控制",
+        "disableScroll": false
+      }
     }
   ],
   "globalStyle": {

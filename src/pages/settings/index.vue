@@ -122,6 +122,45 @@
       </view>
     </view>
 
+    <!-- 家长远程控制：扫码配对，外出也能实时控制这台设备 -->
+    <view class="group">
+      <view class="group-title">家长远程控制（配对后外出也能管）</view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">开启家长远程控制</text>
+          <text class="row-desc">家长手机扫码或输配对码绑定后，可远程临时解锁、立即锁定、改规则、留言、看做题报告；断网时一切照旧不影响</text>
+        </view>
+        <switch :checked="remote.on" color="#FF7A3D" @change="onRemoteSwitch" />
+      </view>
+      <template v-if="remote.on">
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">设备名称</text>
+            <text class="row-desc">给这台设备起个名，家长端会显示（如：哥哥的平板）</text>
+          </view>
+          <input class="gate-input" style="width: 260rpx" v-model="remoteName" maxlength="12" placeholder="哥哥的平板" @blur="saveRemoteName" />
+        </view>
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">配对码</text>
+            <text class="row-desc">家长端输入这串码即可绑定这台设备（一次绑定永久有效）</text>
+          </view>
+          <text class="pair-code">{{ remote.code || '--------' }}</text>
+        </view>
+        <view class="qr-wrap" v-if="remoteQr">
+          <image class="qr-img" :src="remoteQr" mode="widthFix" />
+          <text class="row-desc">家长手机扫码直接打开控制台并绑定</text>
+        </view>
+        <view class="row">
+          <view class="row-main">
+            <text class="row-title">连接状态</text>
+            <text class="row-desc">{{ remoteStatusText }}</text>
+          </view>
+          <text class="row-chev" @click="refreshRemote">↻</text>
+        </view>
+      </template>
+    </view>
+
     <view class="group">
       <view class="group-title">先学再看 · 答题解锁使用时间</view>
       <view class="row">
@@ -302,6 +341,10 @@ import {
   sha256, lockoutLeft, addWrongAttempt, resetAttempts,
   getPowerStatus, openBatterySettings, openOverlaySettings, openAutoStartSettings
 } from '@/common/kiosk'
+import {
+  CONSOLE_URL, getRemoteCfg, enableRemote, disableRemote, setRemoteName,
+  remoteStatus, start as startRemote
+} from '@/common/remote'
 
 const goals = [10, 20, 30, 50]
 const settings = ref(getSettings())
@@ -338,7 +381,60 @@ onShow(async () => {
   serviceOn.value = await isServiceOn()
   cfg.value = await getConfig()
   power.value = await getPowerStatus()
+  refreshRemote()
 })
+
+// ===== 家长远程控制 =====
+const remote = ref({ on: false, code: '', name: '' })
+const remoteName = ref('')
+const remoteQr = ref('')
+const remoteStatusText = ref('未开启')
+
+async function refreshRemote() {
+  const st = remoteStatus()
+  remote.value = { on: st.on, code: st.code, name: st.name }
+  if (!st.on) {
+    remoteStatusText.value = '未开启'
+    remoteQr.value = ''
+    return
+  }
+  remoteName.value = st.name
+  if (st.status === 'ok') {
+    remoteStatusText.value = '已连接云端，家长端可以控制了'
+  } else if (st.status === 'err') {
+    remoteStatusText.value = '云端暂时连不上，本地一切照旧，稍后自动重试'
+  } else {
+    remoteStatusText.value = '连接中…'
+  }
+  // 二维码：家长扫码直达控制台并带上配对码
+  if (!remoteQr.value && st.code) {
+    try {
+      const QR = await import('qrcode')
+      remoteQr.value = await QR.toDataURL(CONSOLE_URL + '/?c=' + st.code, { width: 360, margin: 1 })
+    } catch (e) {
+      remoteQr.value = ''
+    }
+  }
+}
+
+function onRemoteSwitch(e) {
+  if (e.detail.value) {
+    const cfg2 = enableRemote(remoteName.value || remote.value.name)
+    remote.value = { on: true, code: cfg2.code, name: cfg2.name }
+    remoteName.value = cfg2.name
+    startRemote()
+  } else {
+    disableRemote()
+  }
+  refreshRemote()
+}
+
+function saveRemoteName() {
+  if (remoteName.value && remoteName.value !== remote.value.name) {
+    setRemoteName(remoteName.value)
+    refreshRemote()
+  }
+}
 
 // ===== 系统权限：任何模式（省电/待机/锁屏）都能弹回 =====
 async function goBattery() {
@@ -957,5 +1053,30 @@ function back() {
 .mpill.active {
   background: #332c26;
   color: #fff;
+}
+
+/* 家长远程控制：配对码与二维码 */
+.pair-code {
+  font-size: 40rpx;
+  font-weight: 800;
+  letter-spacing: 4rpx;
+  color: #ff7a3d;
+  font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+.qr-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16rpx 0 8rpx;
+  gap: 12rpx;
+}
+
+.qr-img {
+  width: 320rpx;
+  height: 320rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  border: 2rpx solid #f0e4d5;
 }
 </style>

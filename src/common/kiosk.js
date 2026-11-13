@@ -138,6 +138,18 @@ export async function startUnlock(min) {
   return true
 }
 
+// 家长远程「立即锁定」：清除解锁期并把 App 拉回前台（原生实现）
+export async function lockNow() {
+  const p = cap()
+  if (!p) return false
+  try {
+    await p.lockNow()
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 export async function verifyPin(cfg, pin) {
   if (!cfg || !pin) return false
   return (await sha256(cfg.salt + ':' + pin)) === cfg.pinHash

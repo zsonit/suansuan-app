@@ -210,9 +210,14 @@ import { LEMIAO_GROUPS } from '@/common/lemiao'
 import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
-import { getSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone } from '@/common/store'
+import { getSettings, saveSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone } from '@/common/store'
 
 const gradeSel = ref(1)
+// 家长远程设置的年级（设置里持久化过的话，启动时恢复）
+{
+  const savedGrade = getSettings().grade
+  if (savedGrade !== undefined && savedGrade !== null) gradeSel.value = Number(savedGrade) || 1
+}
 const mode = ref('add')
 const difficulty = ref(1)
 const count = ref(10)
@@ -312,6 +317,7 @@ function selectMode(m) {
 
 function selectGrade(k) {
   gradeSel.value = k
+  saveSettings({ grade: k })
   // 切年级后当前模式若不在该年级，选该年级第一个模式
   const all = viewGroups.value.flatMap((g) => g.modes)
   const cur = all.find((m) => m.key === mode.value)

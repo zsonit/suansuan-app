@@ -1,6 +1,7 @@
 <script>
 import { getSettings, getWatchRules, getUnlockUntil } from '@/common/store'
 import { isServiceOn, takeForceChallenge } from '@/common/kiosk'
+import { remoteStatus, start as startRemote, stop as stopRemote } from '@/common/remote'
 
 export default {
   onLaunch() {
@@ -8,6 +9,9 @@ export default {
     getSettings()
   },
   async onShow() {
+    // 家长远程控制：App 在前台时每 6 秒轮询云端指令（后台时轮询暂停，断网静默跳过）
+    if (remoteStatus().on) startRemote()
+
     // 先学再看：解锁时间到，无障碍服务把孩子拉回 App 时，
     // 强制进入挑战赛（10 道按年级随机题，做完才能继续看，做完还可继续挑战赚时间）
     try {

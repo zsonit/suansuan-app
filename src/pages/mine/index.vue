@@ -72,6 +72,12 @@
         <text class="row-text">练习设置</text>
         <text class="row-chev">›</text>
       </view>
+      <view class="row" @click="goRemote">
+        <text class="row-icon">📡</text>
+        <text class="row-text">家长远程控制</text>
+        <text class="row-val">外出也能管</text>
+        <text class="row-chev">›</text>
+      </view>
       <view class="row" @click="about">
         <text class="row-icon">🌏</text>
         <text class="row-text">关于算算星球</text>
@@ -454,6 +460,11 @@ function goWrong() {
 function goSettings() {
   if (gated.value) return
   uni.navigateTo({ url: '/pages/settings/index' })
+}
+
+function goRemote() {
+  if (gated.value) return
+  uni.navigateTo({ url: '/pages/remote/index' })
 }
 
 function about() {
