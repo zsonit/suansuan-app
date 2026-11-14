@@ -63,25 +63,91 @@ public class KioskPlugin extends Plugin {
         call.resolve(ret);
     }
 
-    @PluginMethod
-    public void isServiceOn(PluginCall call) {
-        boolean on = false;
-        AccessibilityManager am = (AccessibilityManager) getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
-        if (am != null) {
-            List<AccessibilityServiceInfo> list =
-                    am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
-            if (list != null) {
-                for (AccessibilityServiceInfo info : list) {
-                    String id = info.getId();
-                    if (id != null && id.contains(getContext().getPackageName())) {
-                        on = true;
-                        break;
+    /** 无障碍服务是否真的在运行：两条路都查（系统列表 + Secure 设置项），任一命中即算开启 */
+    private boolean serviceRunning() {
+        try {
+            AccessibilityManager am =
+                    (AccessibilityManager) getContext().getSystemService(Context.ACCESSIBILITY_SERVICE);
+            if (am != null) {
+                List<AccessibilityServiceInfo> list =
+                        am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+                if (list != null) {
+                    for (AccessibilityServiceInfo info : list) {
+                        String id = info.getId();
+                        if (id != null && id.contains(getContext().getPackageName())) return true;
                     }
                 }
             }
+        } catch (Exception e) {
+            // 忽略，继续用 Secure 设置判断
         }
+        try {
+            String enabled = Settings.Secure.getString(
+                    getContext().getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+            if (enabled != null) {
+                String me = getContext().getPackageName();
+                for (String s : enabled.split(":")) {
+                    if (s.contains(me) && s.contains("KioskService")) return true;
+                }
+            }
+        } catch (Exception e) {
+            // 忽略
+        }
+        return false;
+    }
+
+    /** 服务是否被系统登记（queryIntentServices 能查到说明 Manifest 声明没问题） */
+    private boolean serviceDeclared() {
+        try {
+            Intent i = new Intent("android.accessibilityservice.AccessibilityService");
+            i.setPackage(getContext().getPackageName());
+            List<android.content.pm.ResolveInfo> rs =
+                    getContext().getPackageManager().queryIntentServices(i, 0);
+            return rs != null && !rs.isEmpty();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** 当前 APK 是不是侧载安装（非应用商店）——Android 13+ 侧载会被「受限设置」挡住无障碍 */
+    private String installerName() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.content.pm.InstallSourceInfo si =
+                        getContext().getPackageManager().getInstallSourceInfo(getContext().getPackageName());
+                String p = si == null ? null : si.getInstallingPackageName();
+                return p == null ? "" : p;
+            }
+            String p = getContext().getPackageManager().getInstallerPackageName(getContext().getPackageName());
+            return p == null ? "" : p;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    @PluginMethod
+    public void isServiceOn(PluginCall call) {
         JSObject ret = new JSObject();
-        ret.put("on", on);
+        ret.put("on", serviceRunning());
+        call.resolve(ret);
+    }
+
+    /** 无障碍体检：给前端决定显示哪一步引导 */
+    @PluginMethod
+    public void a11yStatus(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("on", serviceRunning());
+        ret.put("declared", serviceDeclared());
+        ret.put("sdk", Build.VERSION.SDK_INT);
+        ret.put("targetSdk", getContext().getApplicationInfo().targetSdkVersion);
+        String ins = installerName();
+        ret.put("installer", ins);
+        // 安卓 13+ 且非应用商店安装 → 需要先「允许受限制的设置」
+        boolean sideload = ins.isEmpty() || ins.equals("com.android.packageinstaller")
+                || ins.equals("com.google.android.packageinstaller") || ins.contains("documentsui")
+                || ins.contains("filemanager") || ins.contains("browser") || ins.contains("moxiang")
+                || ins.contains("vivo.filemanager");
+        ret.put("restrictedPossible", Build.VERSION.SDK_INT >= 33 && sideload);
         call.resolve(ret);
     }
 
@@ -165,10 +231,35 @@ public class KioskPlugin extends Plugin {
 
     @PluginMethod
     public void openAccessibilitySettings(PluginCall call) {
-        Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        getContext().startActivity(i);
+        // 先试「本应用的无障碍详情页」（部分 ROM 支持，能少点两层菜单）
+        boolean ok = false;
+        try {
+            Intent d = new Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS");
+            d.setData(Uri.parse("package:" + getContext().getPackageName()));
+            d.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(d);
+            ok = true;
+        } catch (Exception e) {
+            ok = false;
+        }
+        if (!ok) {
+            try {
+                Intent i = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            } catch (Exception e) {
+                openAppDetail();
+            }
+        }
         // 去系统设置期间（2 分钟）不拉回，方便开启/关闭服务
+        suspendUntil = System.currentTimeMillis() + 120000L;
+        call.resolve();
+    }
+
+    /** 打开本应用详情页：Android 13+ 侧载应用要在这里「⋮ → 允许受限制的设置」后才能开无障碍 */
+    @PluginMethod
+    public void openAppInfo(PluginCall call) {
+        openAppDetail();
         suspendUntil = System.currentTimeMillis() + 120000L;
         call.resolve();
     }

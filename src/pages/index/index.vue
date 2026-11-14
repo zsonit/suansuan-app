@@ -8,6 +8,16 @@
       <text class="sub">今天已练 {{ today.n }} 题 · 答对 {{ today.right }} 题</text>
     </view>
 
+    <!-- 锁定开着但无障碍被系统关了：这是锁定失效最常见的原因 -->
+    <view class="kiosk-warn" v-if="lockWarn" @click="goA11ySettings">
+      <text class="kw-icon">⚠️</text>
+      <view class="kw-main">
+        <text class="kw-t">专注锁定现在没生效</text>
+        <text class="kw-d">系统把无障碍服务关掉了（装新版本后常见），点这里按步骤开回来</text>
+      </view>
+      <text class="kw-go">去开启 ›</text>
+    </view>
+
     <view class="watch-card" v-if="watchOn">
       <view class="watch-live" v-if="unlockLeftMin > 0">
         <text class="watch-live-icon">🍿</text>
@@ -223,6 +233,7 @@ import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
 import { getSettings, saveSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone, getGradeInfo, getActiveGrade } from '@/common/store'
+import { isEnabled as kioskEnabled, a11yStatus } from '@/common/kiosk'
 
 const gradeSel = ref(1)
 // 家长设定年级：锁定后孩子只能做该年级的题，且每学年 9 月 1 日自动升一级
@@ -368,6 +379,7 @@ onShow(() => {
   settings.value = getSettings()
   today.value = getToday()
   streak.value = getStreak()
+  checkLockAlive()
   // 家长端可能刚改过年级（或到了 9 月 1 日自动升级），回前台以家长设定为准
   const gi = getGradeInfo()
   gradeLocked.value = gi.locked
@@ -380,6 +392,24 @@ onShow(() => {
   refreshUnlock()
   refreshWatch()
 })
+
+// 锁定开着、无障碍服务被系统关掉时提醒家长（Android 13+ 装新版本后很常见）
+const lockWarn = ref(false)
+async function checkLockAlive() {
+  try {
+    if (!(await kioskEnabled())) {
+      lockWarn.value = false
+      return
+    }
+    const st = await a11yStatus()
+    lockWarn.value = !st.on
+  } catch (e) {
+    lockWarn.value = false
+  }
+}
+function goA11ySettings() {
+  uni.navigateTo({ url: '/pages/settings/index' })
+}
 
 // 先学再看：观看时间卡（今日已看 / 还能看 / 做题赚的 + 每日任务/挑战赛入口）
 const watchOn = ref(false)
@@ -486,6 +516,43 @@ function startGrade() {
 
 .nav {
   padding: 8rpx 40rpx 0;
+}
+.kiosk-warn {
+  display: flex;
+  align-items: center;
+  margin: 18rpx 32rpx 0;
+  padding: 20rpx 22rpx;
+  border-radius: 20rpx;
+  background: #fff2e8;
+  border: 2rpx solid #ffd3b5;
+}
+.kw-icon {
+  font-size: 32rpx;
+  margin-right: 14rpx;
+}
+.kw-main {
+  flex: 1;
+  min-width: 0;
+}
+.kw-t {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 800;
+  color: #d9531f;
+}
+.kw-d {
+  display: block;
+  margin-top: 4rpx;
+  font-size: 21rpx;
+  color: #b08064;
+  line-height: 1.5;
+}
+.kw-go {
+  flex: none;
+  margin-left: 12rpx;
+  font-size: 23rpx;
+  font-weight: 800;
+  color: #e2622a;
 }
 .nav-row {
   display: flex;

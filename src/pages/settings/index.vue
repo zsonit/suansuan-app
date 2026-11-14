@@ -69,12 +69,38 @@
         </view>
         <switch :checked="kioskOn" color="#FF7A3D" @change="onKiosk" />
       </view>
-      <view class="row" v-if="kioskOn && !serviceOn" @click="goA11y">
-        <view class="row-main">
-          <text class="row-title warn">⚠ 无障碍服务未开启</text>
-          <text class="row-desc">点这里去系统设置，开启「算算星球 · 专注锁定」后才会生效</text>
+      <!-- 无障碍没开时的分步引导：安卓 13 起侧载应用要先「允许受限制的设置」 -->
+      <view class="a11y-box" v-if="kioskOn && !serviceOn">
+        <view class="a11y-h">⚠ 无障碍服务没开，自动拉回现在是失效的</view>
+        <view class="a11y-sub">照着下面做，开完返回本页会自动检测</view>
+
+        <view class="a11y-step" v-if="a11y.restrictedPossible">
+          <view class="a11y-num">1</view>
+          <view class="a11y-main">
+            <text class="a11y-t">先「允许受限制的设置」</text>
+            <text class="a11y-d">安卓 13 起，用文件/微信/浏览器装的 APK 会被系统限制无障碍。点右边按钮进入本应用信息页 → 右上角 <text class="a11y-code">⋮</text> → 点「允许受限制的设置」→ 确认</text>
+          </view>
+          <view class="perm-btn" @click="goAppInfo">去允许</view>
         </view>
-        <text class="row-chev">›</text>
+
+        <view class="a11y-step">
+          <view class="a11y-num">{{ a11y.restrictedPossible ? 2 : 1 }}</view>
+          <view class="a11y-main">
+            <text class="a11y-t">开启「算算星球 · 专注锁定」</text>
+            <text class="a11y-d">无障碍（已下载的服务 / 已安装的应用）→ 找到算算星球 → 打开开关 → 弹窗点「允许」</text>
+          </view>
+          <view class="perm-btn" @click="goA11y">去开启</view>
+        </view>
+
+        <view class="a11y-tip">
+          提示：每次覆盖安装新版本，系统会把无障碍自动关掉，更新后需要回来再开一次。
+          <text v-if="a11y.restrictedPossible">开关是灰的、或点了弹「出于安全考虑不可用」，就是第 1 步没做。</text>
+          <text v-else>列表里找不到算算星球时，先用文件管理器重新安装一次这个 APK。</text>
+        </view>
+
+        <view class="a11y-refresh" @click="refreshA11y">
+          {{ a11yChecked ? '↻ 还是没开？重新检测' : '↻ 我已经开好了，重新检测' }}
+        </view>
       </view>
       <view class="row" v-if="kioskOn" @click="openUnlock('reset')">
         <view class="row-main">
@@ -338,7 +364,7 @@ import { sfx, speak } from '@/common/sound'
 import {
   QUESTIONS, getConfig, saveConfig, setEnabled, isEnabled, isServiceOn,
   openAccessibilitySettings, verifyPin, verifyAnswer, verifyPhone,
-  sha256, lockoutLeft, addWrongAttempt, resetAttempts,
+  sha256, lockoutLeft, addWrongAttempt, resetAttempts, a11yStatus, openAppInfo,
   getPowerStatus, openBatterySettings, openOverlaySettings, openAutoStartSettings
 } from '@/common/kiosk'
 import {
@@ -353,6 +379,9 @@ const eyeCare = computed(() => settings.value.eyeCare)
 // ===== 专注锁定 =====
 const kioskOn = ref(false)
 const serviceOn = ref(false)
+// 无障碍体检结果（是否受限设置 / 安卓版本）
+const a11y = ref({ on: false, declared: false, sdk: 0, targetSdk: 0, installer: '', restrictedPossible: false })
+const a11yChecked = ref(false)
 // 系统权限：忽略电池优化 / 悬浮窗（后台弹出）
 const power = ref({ batteryIgnored: true, overlay: true })
 const cfg = ref(null)
@@ -378,11 +407,25 @@ const closeErr = ref('')
 onShow(async () => {
   settings.value = getSettings()
   kioskOn.value = await isEnabled()
-  serviceOn.value = await isServiceOn()
+  await refreshA11y()
   cfg.value = await getConfig()
   power.value = await getPowerStatus()
   refreshRemote()
 })
+
+// ===== 无障碍：状态体检与引导 =====
+async function refreshA11y() {
+  try {
+    a11y.value = await a11yStatus()
+    serviceOn.value = !!a11y.value.on
+    a11yChecked.value = true
+  } catch (e) {
+    serviceOn.value = await isServiceOn()
+  }
+}
+function goAppInfo() {
+  openAppInfo()
+}
 
 // ===== 家长远程控制 =====
 const remote = ref({ on: false, code: '', name: '' })
@@ -516,7 +559,7 @@ function applyWatchPending() {
 // ===== 专注锁定逻辑 =====
 async function refreshKiosk() {
   kioskOn.value = await isEnabled()
-  serviceOn.value = await isServiceOn()
+  await refreshA11y()
   cfg.value = await getConfig()
 }
 
@@ -607,7 +650,7 @@ async function finishSetup() {
   overlay.value = null
   uni.showToast({ title: '已开启', icon: 'success' })
   setTimeout(async () => {
-    serviceOn.value = await isServiceOn()
+    await refreshA11y()
     if (!serviceOn.value) {
       uni.showModal({
         title: '还差一步',
@@ -623,6 +666,8 @@ async function finishSetup() {
 
 async function goA11y() {
   await openAccessibilitySettings()
+  // 系统设置回来时 onShow 会自动重新检测；这里延时再补一次，部分机型 onShow 早于服务启动
+  setTimeout(refreshA11y, 1500)
 }
 
 function openUnlock(purpose) {
@@ -744,7 +789,7 @@ function applyUnlock() {
       kioskOn.value = true
       overlay.value = null
       uni.showToast({ title: '已开启', icon: 'success' })
-      serviceOn.value = await isServiceOn()
+      await refreshA11y()
       if (!serviceOn.value) goA11y()
     })
   } else if (unlockPurpose.value === 'reset') {
@@ -932,6 +977,88 @@ function back() {
 
 .row-title.warn {
   color: #e67e22;
+}
+
+/* ===== 无障碍引导 ===== */
+.a11y-box {
+  margin: 6rpx 0 18rpx;
+  padding: 26rpx 24rpx 20rpx;
+  border-radius: 22rpx;
+  background: linear-gradient(180deg, #fff6ef, #fffaf6);
+  border: 2rpx solid #ffdcc4;
+}
+.a11y-h {
+  font-size: 28rpx;
+  font-weight: 800;
+  color: #e2622a;
+  line-height: 1.5;
+}
+.a11y-sub {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #b08d76;
+}
+.a11y-step {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 20rpx;
+  padding-top: 18rpx;
+  border-top: 2rpx dashed #ffdfc9;
+}
+.a11y-num {
+  flex: none;
+  width: 38rpx;
+  height: 38rpx;
+  margin-right: 14rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff9a5c, #ff7a3d);
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: 800;
+  text-align: center;
+  line-height: 38rpx;
+}
+.a11y-main {
+  flex: 1;
+  min-width: 0;
+}
+.a11y-t {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #332c26;
+  line-height: 1.5;
+}
+.a11y-d {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 21rpx;
+  color: #9a8b7e;
+  line-height: 1.65;
+}
+.a11y-code {
+  font-weight: 800;
+  color: #e2622a;
+}
+.a11y-tip {
+  margin-top: 18rpx;
+  padding: 14rpx 16rpx;
+  border-radius: 14rpx;
+  background: #fff;
+  font-size: 20rpx;
+  color: #a39285;
+  line-height: 1.7;
+}
+.a11y-refresh {
+  margin-top: 16rpx;
+  padding: 16rpx 0;
+  text-align: center;
+  border-radius: 100rpx;
+  border: 2rpx solid #ffcdae;
+  color: #e2622a;
+  font-size: 24rpx;
+  font-weight: 700;
+  background: #fff;
 }
 
 /* ===== 专注锁定弹层 ===== */

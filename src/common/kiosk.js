@@ -71,9 +71,41 @@ export async function isServiceOn() {
   return !!(r && r.on)
 }
 
+// 无障碍体检：返回 { on, declared, sdk, targetSdk, installer, restrictedPossible }
+// restrictedPossible = Android 13+ 且为侧载安装 → 必须先「允许受限制的设置」才能开无障碍
+export async function a11yStatus() {
+  const p = cap()
+  if (!p || !p.a11yStatus) {
+    return { on: false, declared: false, sdk: 0, targetSdk: 0, installer: '', restrictedPossible: false }
+  }
+  try {
+    const r = await p.a11yStatus()
+    return {
+      on: !!(r && r.on),
+      declared: !!(r && r.declared),
+      sdk: (r && r.sdk) || 0,
+      targetSdk: (r && r.targetSdk) || 0,
+      installer: (r && r.installer) || '',
+      restrictedPossible: !!(r && r.restrictedPossible)
+    }
+  } catch (e) {
+    return { on: false, declared: false, sdk: 0, targetSdk: 0, installer: '', restrictedPossible: false }
+  }
+}
+
 export async function openAccessibilitySettings() {
   const p = cap()
   if (p) await p.openAccessibilitySettings()
+}
+
+// 打开本应用详情页（Android 13+ 侧载应用要在这里 ⋮ → 允许受限制的设置）
+export async function openAppInfo() {
+  const p = cap()
+  if (p && p.openAppInfo) {
+    await p.openAppInfo()
+    return
+  }
+  await openAccessibilitySettings()
 }
 
 /* ---------------- 任何模式都能弹回：系统权限 ---------------- */

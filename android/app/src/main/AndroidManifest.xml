@@ -21,9 +21,11 @@
             </intent-filter>
         </activity>
 
+        <!-- 无障碍服务必须 exported=true：系统（system_server）要跨进程绑定它，
+             声明成 false 时部分 ROM 会出现「开关打不开 / 服务无法启动」 -->
         <service
             android:name=".KioskService"
-            android:exported="false"
+            android:exported="true"
             android:label="算算星球 · 专注锁定"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
