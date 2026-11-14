@@ -14,6 +14,12 @@
   }
   h1 { font-size: 22px; margin-bottom: 4px; }
   .sub { font-size: 13px; color: #a08c78; margin-bottom: 18px; }
+  .apps { display: flex; gap: 8px; margin: -8px 0 16px; }
+  .apps a {
+    flex: 1; text-align: center; background: #fff; border: 1px solid #f0e4d5; border-radius: 12px;
+    padding: 11px 6px; font-size: 13px; color: #ff7a3d; font-weight: 700; text-decoration: none;
+  }
+  .apps a:active { background: #fff4e8; }
   .card {
     background: #fffdf9; border: 1px solid #f4e9db; border-radius: 18px;
     padding: 16px; margin-top: 14px; box-shadow: 0 4px 16px rgba(120,80,40,.06);
@@ -75,6 +81,11 @@
 <body>
   <h1>📡 算算星球 · 家长控制台</h1>
   <div class="sub">绑定孩子设备后，可远程临时解锁 / 立即锁定 / 修改规则 / 留言 / 查看做题报告</div>
+
+  <div class="apps">
+    <a href="./kids/">🧒 孩子端网页版</a>
+    <a href="./parent/">📱 家长端网页版</a>
+  </div>
 
   <div class="card">
     <h2>绑定孩子的设备</h2>

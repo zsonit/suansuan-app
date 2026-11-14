@@ -44,3 +44,6 @@ parent-app/ios/build/
 parent-app/ios/App/Pods/
 parent-app/ios/App/App/public/
 parent-app/ios/DerivedData/
+
+# 三端合并网页站点（构建产物，用 build-web.sh 重新生成）
+web-dist/
