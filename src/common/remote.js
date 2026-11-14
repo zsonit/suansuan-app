@@ -164,6 +164,12 @@ async function cycle() {
 
 async function execCommand(c) {
   const p = c.payload || {}
+  try {
+    const d = await import('@/common/diag')
+    d.logLine('remote', '收到家长指令 ' + c.type + ' ' + JSON.stringify(p).slice(0, 80))
+  } catch (e) {
+    // 忽略
+  }
   switch (c.type) {
     case 'unlock': {
       const kiosk = await import('@/common/kiosk')

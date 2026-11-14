@@ -50,6 +50,7 @@ public class KioskService extends AccessibilityService {
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        Diag.log(this, "a11y", "无障碍服务已连接，开始守护");
         handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(patrol, 3000);
 
@@ -94,6 +95,7 @@ public class KioskService extends AccessibilityService {
             screenReceiver = null;
         }
         releaseWake();
+        Diag.log(this, "a11y", "无障碍服务已断开（被系统关闭或应用退出）");
         super.onDestroy();
     }
 
@@ -141,25 +143,8 @@ public class KioskService extends AccessibilityService {
     }
 
     private void pull(SharedPreferences sp) {
-        // 省电 / 熄屏状态下先点亮屏幕，否则 Activity 起来了也看不见
-        wakeScreen();
-
-        // 告诉 App：这次是被强制拉回的，必须进挑战页（进程被杀重启也有效）
-        try {
-            sp.edit().putBoolean("force_challenge", true).apply();
-        } catch (Exception e) {
-            // 忽略
-        }
-
-        Intent i = getPackageManager().getLaunchIntentForPackage(getPackageName());
-        if (i == null) return;
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-        i.putExtra("kiosk_wake", true);
-        try {
-            startActivity(i);
-        } catch (Exception e) {
-            // 系统限制后台启动时，等下一次巡检（无障碍服务/悬浮窗权限通常已豁免）
-        }
+        Diag.log(this, "a11y", "巡检拉回 · 前台=" + lastForeignPkg);
+        KioskPull.pull(this, "无障碍巡检: " + lastForeignPkg);
     }
 
     private void wakeScreen() {

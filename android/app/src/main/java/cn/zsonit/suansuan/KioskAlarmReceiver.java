@@ -37,6 +37,7 @@ public class KioskAlarmReceiver extends BroadcastReceiver {
             }
 
             sp.edit().putBoolean("force_challenge", true).apply();
+            Diag.log(ctx, "alarm", "到点闹钟触发，拉回前台");
             Intent i = ctx.getPackageManager().getLaunchIntentForPackage(ctx.getPackageName());
             if (i == null) return;
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
@@ -44,6 +45,7 @@ public class KioskAlarmReceiver extends BroadcastReceiver {
             ctx.startActivity(i);
         } catch (Exception e) {
             // 系统限制后台启动时静默失败，无障碍服务巡检会继续兜底
+            Diag.log(ctx, "alarm", "闹钟拉回失败: " + e.getClass().getSimpleName());
         }
     }
 }

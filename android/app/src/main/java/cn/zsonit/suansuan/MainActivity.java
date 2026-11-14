@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         registerPlugin(KioskPlugin.class);
+        registerPlugin(DiagPlugin.class);
         applyKioskWake(getIntent());
     }
 

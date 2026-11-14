@@ -26,6 +26,8 @@ export default {
       // 无障碍服务拉起时写了强制挑战标记：省电模式/进程被杀重启后同样生效
       const forced = await takeForceChallenge()
       if (forced) {
+        const d = await import('@/common/diag')
+        d.logLine('app', '被拉回前台，进入强制挑战')
         uni.redirectTo({ url: '/pages/practice/index?source=challenge&count=10' })
         return
       }

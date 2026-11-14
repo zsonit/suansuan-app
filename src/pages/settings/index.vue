@@ -98,6 +98,10 @@
           <text v-else>列表里找不到算算星球时，先用文件管理器重新安装一次这个 APK。</text>
         </view>
 
+        <view class="a11y-alt">
+          实在开不了：往下滑到「备用监控」，授权「使用情况访问」也能锁住，不需要无障碍。
+        </view>
+
         <view class="a11y-refresh" @click="refreshA11y">
           {{ a11yChecked ? '↻ 还是没开？重新检测' : '↻ 我已经开好了，重新检测' }}
         </view>
@@ -106,6 +110,74 @@
         <view class="row-main">
           <text class="row-title">修改密码 / 关闭锁定</text>
           <text class="row-desc">需要输入锁定密码，忘记密码可用恢复码或安全问题找回</text>
+        </view>
+        <text class="row-chev">›</text>
+      </view>
+    </view>
+
+    <!-- 备用监控：无障碍彻底开不了时的替代方案 -->
+    <view class="group" v-if="kioskOn">
+      <view class="group-title">备用监控 · 无障碍开不了时用</view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">开启备用监控</text>
+          <text class="row-desc">不依赖无障碍服务。用系统「使用情况访问」每 2 秒看一次当前应用，孩子切到别的 APP 或桌面就拉回练习页</text>
+        </view>
+        <switch :checked="wd.on" color="#FF7A3D" @change="onWatchdog" />
+      </view>
+      <view class="row" v-if="!wd.usage" @click="goUsage">
+        <view class="row-main">
+          <text class="row-title warn">① 先给「使用情况访问」权限</text>
+          <text class="row-desc">系统设置 → 特殊应用权限 → 使用情况访问 → 算算星球 → 允许（不同品牌叫法略有差异）</text>
+        </view>
+        <view class="perm-btn">去授权</view>
+      </view>
+      <view class="row" v-else>
+        <view class="row-main">
+          <text class="row-title">使用情况访问</text>
+          <text class="row-desc">已授权 ✓ {{ wd.a11y ? '（无障碍也在运行，两套会自动分工，不重复拉回）' : '（无障碍没开，当前由备用监控守护）' }}</text>
+        </view>
+      </view>
+      <view class="row" @click="refreshWatchdog">
+        <view class="row-main">
+          <text class="row-title">刷新状态</text>
+          <text class="row-desc">授权完回来点一下；备用监控已开启但一直不拉回时，先来点这里</text>
+        </view>
+        <text class="row-chev">↻</text>
+      </view>
+      <view class="a11y-tip" style="margin: 4rpx 0 18rpx">
+        提示：备用监控会常驻一条「算算星球正在守护中」的通知，这是正常的（系统要求）。部分手机还需要允许「自启动」并在后台保活，否则会被省电策略杀掉。
+      </view>
+    </view>
+
+    <!-- 检修日志：带开关，可导出 -->
+    <view class="group">
+      <view class="group-title">检修日志</view>
+      <view class="row">
+        <view class="row-main">
+          <text class="row-title">记录检修日志</text>
+          <text class="row-desc">记录锁定、无障碍、拉回、云端指令等关键事件；出问题时打开复现一次，再导出给人看</text>
+        </view>
+        <switch :checked="diag.on" color="#FF7A3D" @change="onDiag" />
+      </view>
+      <view class="row" @click="goLog">
+        <view class="row-main">
+          <text class="row-title">查看日志</text>
+          <text class="row-desc">{{ diag.size ? '当前约 ' + diagSizeText : '还没有记录' }}</text>
+        </view>
+        <text class="row-chev">›</text>
+      </view>
+      <view class="row" @click="doExport">
+        <view class="row-main">
+          <text class="row-title">导出日志</text>
+          <text class="row-desc">生成 txt 文件（含设备信息），可直接分享到微信、QQ 或存到文件</text>
+        </view>
+        <view class="perm-btn">导出</view>
+      </view>
+      <view class="row" @click="doClearLog">
+        <view class="row-main">
+          <text class="row-title">清空日志</text>
+          <text class="row-desc">清空后不可恢复</text>
         </view>
         <text class="row-chev">›</text>
       </view>
@@ -365,8 +437,12 @@ import {
   QUESTIONS, getConfig, saveConfig, setEnabled, isEnabled, isServiceOn,
   openAccessibilitySettings, verifyPin, verifyAnswer, verifyPhone,
   sha256, lockoutLeft, addWrongAttempt, resetAttempts, a11yStatus, openAppInfo,
-  getPowerStatus, openBatterySettings, openOverlaySettings, openAutoStartSettings
+  getPowerStatus, openBatterySettings, openOverlaySettings, openAutoStartSettings,
+  watchdogStatus, setWatchdog, openUsageAccessSettings
 } from '@/common/kiosk'
+import {
+  diagStatus, setDiag, exportLog, clearLog, logLine
+} from '@/common/diag'
 import {
   CONSOLE_URL, getRemoteCfg, enableRemote, disableRemote, setRemoteName,
   remoteStatus, start as startRemote
@@ -382,6 +458,14 @@ const serviceOn = ref(false)
 // 无障碍体检结果（是否受限设置 / 安卓版本）
 const a11y = ref({ on: false, declared: false, sdk: 0, targetSdk: 0, installer: '', restrictedPossible: false })
 const a11yChecked = ref(false)
+// 备用监控（使用情况访问）
+const wd = ref({ usage: false, on: false, a11y: false })
+// 检修日志
+const diag = ref({ on: false, size: 0 })
+const diagSizeText = computed(() => {
+  const k = Math.round((diag.value.size || 0) / 1024)
+  return k > 0 ? k + ' KB' : '不到 1 KB'
+})
 // 系统权限：忽略电池优化 / 悬浮窗（后台弹出）
 const power = ref({ batteryIgnored: true, overlay: true })
 const cfg = ref(null)
@@ -411,6 +495,8 @@ onShow(async () => {
   cfg.value = await getConfig()
   power.value = await getPowerStatus()
   refreshRemote()
+  refreshWatchdog()
+  refreshDiag()
 })
 
 // ===== 无障碍：状态体检与引导 =====
@@ -425,6 +511,77 @@ async function refreshA11y() {
 }
 function goAppInfo() {
   openAppInfo()
+}
+
+// ===== 备用监控 =====
+async function refreshWatchdog() {
+  try {
+    wd.value = await watchdogStatus()
+  } catch (e) {
+    wd.value = { usage: false, on: false, a11y: false }
+  }
+}
+async function onWatchdog(e) {
+  const want = !!e.detail.value
+  if (want && !wd.value.usage) {
+    uni.showToast({ title: '请先授权使用情况访问', icon: 'none' })
+    goUsage()
+    return
+  }
+  const on = await setWatchdog(want)
+  wd.value = { ...wd.value, on }
+  logLine('watchdog', want ? '设置页开启备用监控' : '设置页关闭备用监控')
+  uni.showToast({ title: want ? '备用监控已开启' : '已关闭', icon: 'success' })
+  setTimeout(refreshWatchdog, 800)
+}
+async function goUsage() {
+  await openUsageAccessSettings()
+  setTimeout(refreshWatchdog, 1500)
+}
+
+// ===== 检修日志 =====
+async function refreshDiag() {
+  diag.value = await diagStatus()
+}
+async function onDiag(e) {
+  const on = !!e.detail.value
+  await setDiag(on)
+  diag.value = await diagStatus()
+  if (on) logLine('diag', '家长打开检修日志')
+  uni.showToast({ title: on ? '开始记录' : '已停止记录', icon: 'success' })
+}
+function goLog() {
+  uni.navigateTo({ url: '/pages/log/index' })
+}
+async function doExport() {
+  uni.showLoading({ title: '生成中…' })
+  const r = await exportLog()
+  uni.hideLoading()
+  if (r && r.path) {
+    uni.showToast({ title: '已打开分享', icon: 'success' })
+  } else if (r && r.text) {
+    uni.setClipboardData({
+      data: r.text,
+      success: () => uni.showToast({ title: '已复制到剪贴板', icon: 'success' })
+    })
+  } else {
+    uni.showToast({ title: '导出失败，请稍后再试', icon: 'none' })
+  }
+  refreshDiag()
+}
+function doClearLog() {
+  uni.showModal({
+    title: '清空检修日志？',
+    content: '清空后不可恢复',
+    confirmText: '清空',
+    confirmColor: '#ff6b6b',
+    success: async (r) => {
+      if (!r.confirm) return
+      await clearLog()
+      await refreshDiag()
+      uni.showToast({ title: '已清空', icon: 'success' })
+    }
+  })
 }
 
 // ===== 家长远程控制 =====
@@ -1048,6 +1205,15 @@ function back() {
   font-size: 20rpx;
   color: #a39285;
   line-height: 1.7;
+}
+.a11y-alt {
+  margin-top: 14rpx;
+  padding: 12rpx 16rpx;
+  border-radius: 12rpx;
+  background: #fff3e9;
+  font-size: 20rpx;
+  color: #c1783f;
+  line-height: 1.65;
 }
 .a11y-refresh {
   margin-top: 16rpx;

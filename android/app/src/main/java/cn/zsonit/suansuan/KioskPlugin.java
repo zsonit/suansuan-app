@@ -34,9 +34,11 @@ public class KioskPlugin extends Plugin {
     public void setEnabled(PluginCall call) {
         boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled"));
         sp().edit().putBoolean("enabled", enabled).apply();
+        Diag.log(getContext(), "kiosk", enabled ? "锁定已开启" : "锁定已关闭");
         if (!enabled) {
-            // 关闭锁定：撤销到点闹钟，避免误弹
+            // 关闭锁定：撤销到点闹钟 + 停掉备用监控，避免误弹
             cancelAlarm();
+            stopWatchdogService();
         }
         JSObject ret = new JSObject();
         ret.put("enabled", enabled);
@@ -160,6 +162,7 @@ public class KioskPlugin extends Plugin {
         sp().edit().putLong("unlock_until", until).apply();
         // 再设一个精确闹钟兜底：深度待机/省电模式下 Handler 可能被冻结，闹钟仍会到点拉起
         scheduleAlarm(until);
+        Diag.log(getContext(), "kiosk", "解锁期 " + (ms == null ? 60000 : ms) + "ms");
         call.resolve();
     }
 
@@ -217,6 +220,7 @@ public class KioskPlugin extends Plugin {
         suspendUntil = 0L;
         sp().edit().putLong("unlock_until", 0L).apply();
         cancelAlarm();
+        Diag.log(getContext(), "kiosk", "家长远程要求立即锁定");
         try {
             Intent i = getContext().getPackageManager().getLaunchIntentForPackage(getContext().getPackageName());
             if (i != null) {
@@ -252,6 +256,71 @@ public class KioskPlugin extends Plugin {
             }
         }
         // 去系统设置期间（2 分钟）不拉回，方便开启/关闭服务
+        suspendUntil = System.currentTimeMillis() + 120000L;
+        call.resolve();
+    }
+
+    /* ---------------- 备用监控（无障碍开不了时的替代方案） ---------------- */
+
+    private void stopWatchdogService() {
+        try {
+            getContext().stopService(new Intent(getContext(), WatchdogService.class));
+        } catch (Exception e) {
+            // 忽略
+        }
+    }
+
+    @PluginMethod
+    public void watchdogStatus(PluginCall call) {
+        SharedPreferences sp = sp();
+        JSObject ret = new JSObject();
+        ret.put("usage", Diag.usageAccess(getContext()));
+        ret.put("on", sp.getBoolean("watchdog_on", false));
+        ret.put("a11y", KioskPull.accessibilityOn(getContext()));
+        call.resolve(ret);
+    }
+
+    /** 开启/关闭备用监控（使用情况访问 + 前台服务巡检） */
+    @PluginMethod
+    public void setWatchdog(PluginCall call) {
+        boolean on = Boolean.TRUE.equals(call.getBoolean("on"));
+        sp().edit().putBoolean("watchdog_on", on).apply();
+        if (on) {
+            try {
+                Intent s = new Intent(getContext(), WatchdogService.class);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    getContext().startForegroundService(s);
+                } else {
+                    getContext().startService(s);
+                }
+            } catch (Exception e) {
+                Diag.log(getContext(), "watchdog", "启动失败: " + e.getClass().getSimpleName());
+            }
+        } else {
+            stopWatchdogService();
+        }
+        Diag.log(getContext(), "watchdog", on ? "家长开启备用监控" : "家长关闭备用监控");
+        JSObject ret = new JSObject();
+        ret.put("on", on);
+        call.resolve(ret);
+    }
+
+    /** 去授权「使用情况访问」（备用监控依赖它） */
+    @PluginMethod
+    public void openUsageAccessSettings(PluginCall call) {
+        try {
+            Intent i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(i);
+        } catch (Exception e) {
+            try {
+                Intent i = new Intent(Settings.ACTION_SETTINGS);
+                i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(i);
+            } catch (Exception e2) {
+                openAppDetail();
+            }
+        }
         suspendUntil = System.currentTimeMillis() + 120000L;
         call.resolve();
     }

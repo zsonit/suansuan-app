@@ -45,6 +45,13 @@
       }
     },
     {
+      "path": "pages/log/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "检修日志"
+      }
+    },
+    {
       "path": "pages/stages/index",
       "style": {
         "navigationStyle": "custom",

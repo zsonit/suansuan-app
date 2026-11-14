@@ -13,7 +13,7 @@
       <text class="kw-icon">⚠️</text>
       <view class="kw-main">
         <text class="kw-t">专注锁定现在没生效</text>
-        <text class="kw-d">系统把无障碍服务关掉了（装新版本后常见），点这里按步骤开回来</text>
+        <text class="kw-d">没开无障碍、也没开备用监控，孩子切走不会被拉回。点这里开一种</text>
       </view>
       <text class="kw-go">去开启 ›</text>
     </view>
@@ -233,7 +233,7 @@ import { STAGES, TOTAL_POINTS } from '@/common/stages'
 import { OPEN_BANKS } from '@/common/openbank'
 import { sfx } from '@/common/sound'
 import { getSettings, saveSettings, getToday, getStreak, getUnlockUntil, getWatchRules, getWatchUsed, getWatchEarned, watchAvailable, getDailyProgress, getChallengeDone, getGradeInfo, getActiveGrade } from '@/common/store'
-import { isEnabled as kioskEnabled, a11yStatus } from '@/common/kiosk'
+import { isEnabled as kioskEnabled, a11yStatus, watchdogStatus } from '@/common/kiosk'
 
 const gradeSel = ref(1)
 // 家长设定年级：锁定后孩子只能做该年级的题，且每学年 9 月 1 日自动升一级
@@ -402,7 +402,13 @@ async function checkLockAlive() {
       return
     }
     const st = await a11yStatus()
-    lockWarn.value = !st.on
+    if (st.on) {
+      lockWarn.value = false
+      return
+    }
+    // 无障碍没开时，看备用监控有没有顶上
+    const w = await watchdogStatus()
+    lockWarn.value = !w.on
   } catch (e) {
     lockWarn.value = false
   }
