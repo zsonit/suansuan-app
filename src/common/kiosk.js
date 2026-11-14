@@ -97,12 +97,20 @@ export async function a11yStatus() {
 // 依赖系统「使用情况访问」权限，每 2 秒查一次前台应用，发现离开就拉回
 export async function watchdogStatus() {
   const p = cap()
-  if (!p || !p.watchdogStatus) return { usage: false, on: false, a11y: false }
+  if (!p || !p.watchdogStatus) {
+    return { usage: false, on: false, a11y: false, running: false, overlay: true }
+  }
   try {
     const r = await p.watchdogStatus()
-    return { usage: !!(r && r.usage), on: !!(r && r.on), a11y: !!(r && r.a11y) }
+    return {
+      usage: !!(r && r.usage),
+      on: !!(r && r.on),
+      running: !!(r && r.running),
+      a11y: !!(r && r.a11y),
+      overlay: r ? r.overlay !== false : true
+    }
   } catch (e) {
-    return { usage: false, on: false, a11y: false }
+    return { usage: false, on: false, a11y: false, running: false, overlay: true }
   }
 }
 

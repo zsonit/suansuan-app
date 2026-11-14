@@ -18,9 +18,8 @@ import java.util.Locale;
 
 /**
  * 检修日志：家长排查问题用。
- * 开关打开后，把锁定/无障碍/备用监控/云指令等关键事件追加写入应用私有目录的 diag.log，
- * 可一键导出（分享到微信/存文件）。
- * 日志只在「开关打开」时记录，默认关闭，避免无谓占用空间；单文件上限 512KB，超出自动截断保留后半段。
+ * 开关把事件追加写入应用私有目录的 diag.log，可一键导出（分享到微信/存文件）。
+ * 日志默认开启（排查问题最怕「出事那段没记上」），开关只用于临时关掉；单文件上限 512KB，超出自动截断保留后半段。
  */
 public final class Diag {
     private static final String PREF = "diag";
@@ -34,7 +33,7 @@ public final class Diag {
     public static boolean enabled(Context c) {
         if (c == null) return false;
         try {
-            return c.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(KEY_ON, false);
+            return c.getSharedPreferences(PREF, Context.MODE_PRIVATE).getBoolean(KEY_ON, true);
         } catch (Exception e) {
             return false;
         }

@@ -3,6 +3,7 @@ package cn.zsonit.suansuan;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.PowerManager;
 import android.provider.Settings;
 
@@ -86,11 +87,69 @@ public final class KioskPull {
         if (i == null) return;
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
         i.putExtra("kiosk_wake", true);
+
+        boolean started = false;
         try {
             c.startActivity(i);
-            Diag.log(c, "pull", "拉起成功 · " + reason);
+            started = true;
         } catch (Exception e) {
-            Diag.log(c, "pull", "拉起失败(" + reason + "): " + e.getClass().getSimpleName());
+            Diag.log(c, "pull", "直接拉起被系统拦截(" + reason + "): " + e.getClass().getSimpleName());
+        }
+
+        // 双保险：安卓 10+ 后台启动 Activity 默认被拦（除非有悬浮窗权限），
+        // 再发一条「全屏意图」通知，系统会像来电一样直接把界面弹到孩子面前
+        try {
+            postFullScreenNotice(c, i);
+        } catch (Exception e) {
+            Diag.log(c, "pull", "全屏通知失败: " + e.getClass().getSimpleName());
+        }
+
+        Diag.log(c, "pull", (started ? "拉起成功" : "改用全屏通知拉回") + " · " + reason);
+    }
+
+    private static final int PULL_NOTIF_ID = 2102;
+    private static final String PULL_CH_ID = "suansuan_pull";
+
+    private static void postFullScreenNotice(Context c, Intent launch) {
+        android.app.NotificationManager nm =
+                (android.app.NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) return;
+        if (Build.VERSION.SDK_INT >= 26) {
+            android.app.NotificationChannel ch = new android.app.NotificationChannel(
+                    PULL_CH_ID, "回到练习提醒", android.app.NotificationManager.IMPORTANCE_HIGH);
+            ch.setDescription("锁定期间离开算算星球时的全屏提醒");
+            ch.setShowBadge(false);
+            nm.createNotificationChannel(ch);
+        }
+        android.app.PendingIntent pi = android.app.PendingIntent.getActivity(
+                c, PULL_NOTIF_ID, launch,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+        android.app.Notification.Builder b;
+        if (Build.VERSION.SDK_INT >= 26) {
+            b = new android.app.Notification.Builder(c, PULL_CH_ID);
+        } else {
+            b = new android.app.Notification.Builder(c).setPriority(android.app.Notification.PRIORITY_HIGH);
+        }
+        b.setContentTitle("时间到了，回来做题吧")
+                .setContentText("点按回到算算星球练习界面")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .setAutoCancel(true)
+                .setContentIntent(pi);
+        if (Build.VERSION.SDK_INT >= 29) {
+            // 全屏意图：像来电一样直接弹出界面（USE_FULL_SCREEN_INTENT 已声明）
+            b.setFullScreenIntent(pi, true);
+        }
+        nm.notify(PULL_NOTIF_ID, b.build());
+    }
+
+    /** 回到本 App 时撤掉「拉回」通知 */
+    public static void cancelPullNotice(Context c) {
+        try {
+            android.app.NotificationManager nm =
+                    (android.app.NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) nm.cancel(PULL_NOTIF_ID);
+        } catch (Exception e) {
+            // 忽略
         }
     }
 

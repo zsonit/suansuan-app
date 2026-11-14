@@ -35,7 +35,11 @@ public class KioskPlugin extends Plugin {
         boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled"));
         sp().edit().putBoolean("enabled", enabled).apply();
         Diag.log(getContext(), "kiosk", enabled ? "锁定已开启" : "锁定已关闭");
-        if (!enabled) {
+        if (enabled) {
+            // 开锁定就顺手把备用监控拉起来（有「使用情况访问」权限才有效；
+            // 服务内部会自查，无权限/锁定关了会自己退出，多拉无副作用）
+            startWatchdogIfNeeded();
+        } else {
             // 关闭锁定：撤销到点闹钟 + 停掉备用监控，避免误弹
             cancelAlarm();
             stopWatchdogService();
@@ -270,13 +274,38 @@ public class KioskPlugin extends Plugin {
         }
     }
 
+    /** 有「使用情况访问」权限且服务没在跑时，把备用监控拉起来（自愈） */
+    private void startWatchdogIfNeeded() {
+        if (WatchdogService.running) return;
+        if (!Diag.usageAccess(getContext())) return;
+        try {
+            Intent s = new Intent(getContext(), WatchdogService.class);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                getContext().startForegroundService(s);
+            } else {
+                getContext().startService(s);
+            }
+            Diag.log(getContext(), "watchdog", "自动恢复备用监控服务");
+        } catch (Exception e) {
+            Diag.log(getContext(), "watchdog", "自动恢复失败: " + e.getClass().getSimpleName());
+        }
+    }
+
     @PluginMethod
     public void watchdogStatus(PluginCall call) {
         SharedPreferences sp = sp();
+        boolean on = sp.getBoolean("watchdog_on", false);
+        // 自愈：配置显示开着、权限也有，但服务死了（覆盖安装后常见）→ 立刻拉起来
+        if (on && !WatchdogService.running
+                && KioskPull.locked(getContext()) && Diag.usageAccess(getContext())) {
+            startWatchdogIfNeeded();
+        }
         JSObject ret = new JSObject();
         ret.put("usage", Diag.usageAccess(getContext()));
-        ret.put("on", sp.getBoolean("watchdog_on", false));
+        ret.put("on", on);
+        ret.put("running", WatchdogService.running);
         ret.put("a11y", KioskPull.accessibilityOn(getContext()));
+        ret.put("overlay", Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(getContext()));
         call.resolve(ret);
     }
 

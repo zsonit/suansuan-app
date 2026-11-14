@@ -135,13 +135,20 @@
       <view class="row" v-else>
         <view class="row-main">
           <text class="row-title">使用情况访问</text>
-          <text class="row-desc">已授权 ✓ {{ wd.a11y ? '（无障碍也在运行，两套会自动分工，不重复拉回）' : '（无障碍没开，当前由备用监控守护）' }}</text>
+          <text class="row-desc">已授权 ✓ {{ wd.running ? (wd.a11y ? '（监控服务运行中，与无障碍自动分工）' : '（监控服务运行中，正在守护）') : '（服务还没起来，点下面「刷新状态」自动恢复）' }}</text>
         </view>
+      </view>
+      <view class="row" v-if="wd.usage && !wd.overlay" @click="goOverlay">
+        <view class="row-main">
+          <text class="row-title warn">② 再开「悬浮窗」权限（重要）</text>
+          <text class="row-desc">安卓 10 以上没有悬浮窗，监控在孩子玩别的 APP 时无法直接把练习页弹回来。开了它拉回才稳</text>
+        </view>
+        <view class="perm-btn">去授权</view>
       </view>
       <view class="row" @click="refreshWatchdog">
         <view class="row-main">
-          <text class="row-title">刷新状态</text>
-          <text class="row-desc">授权完回来点一下；备用监控已开启但一直不拉回时，先来点这里</text>
+          <text class="row-title">刷新状态 / 自动修复</text>
+          <text class="row-desc">授权完回来点一下。监控开关开着但服务没在跑时，会自动把它拉起来</text>
         </view>
         <text class="row-chev">↻</text>
       </view>
@@ -516,9 +523,13 @@ function goAppInfo() {
 // ===== 备用监控 =====
 async function refreshWatchdog() {
   try {
+    const old = wd.value
     wd.value = await watchdogStatus()
+    if (old.on && !old.running && wd.value.running) {
+      uni.showToast({ title: '已自动恢复监控服务', icon: 'success' })
+    }
   } catch (e) {
-    wd.value = { usage: false, on: false, a11y: false }
+    wd.value = { usage: false, on: false, a11y: false, running: false, overlay: true }
   }
 }
 async function onWatchdog(e) {

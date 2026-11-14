@@ -21,10 +21,12 @@ import android.os.Looper;
 public class WatchdogService extends Service {
     private static final String CH_ID = "suansuan_watchdog";
     private static final int CH_NOTIFY_ID = 1101;
+    /** 服务是否真的在跑（区别于配置里的开关，覆盖安装后开关还在但服务已死） */
+    public static volatile boolean running = false;
     private Handler handler;
     private long lastPull = 0L;
+    private long lastPermLog = 0L;
     private String lastLoggedPkg = "";
-    private boolean warnedNoPerm = false;
 
     private final Runnable loop = new Runnable() {
         @Override
@@ -41,6 +43,7 @@ public class WatchdogService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        running = true;
         startAsForeground();
         handler = new Handler(Looper.getMainLooper());
         handler.postDelayed(loop, 2000);
@@ -93,9 +96,11 @@ public class WatchdogService extends Service {
         }
 
         if (!Diag.usageAccess(c)) {
-            if (!warnedNoPerm) {
-                warnedNoPerm = true;
-                Diag.log(c, "watchdog", "没有「使用情况访问」权限，备用监控暂时无效");
+            // 每 60 秒记一条，别刷屏；设置页「刷新状态」也能看到
+            long now = System.currentTimeMillis();
+            if (now - lastPermLog > 60000L) {
+                lastPermLog = now;
+                Diag.log(c, "watchdog", "没有「使用情况访问」权限，备用监控暂时无效，请在系统设置里授权");
             }
             return;
         }
@@ -126,6 +131,7 @@ public class WatchdogService extends Service {
 
     @Override
     public void onDestroy() {
+        running = false;
         if (handler != null) {
             handler.removeCallbacks(loop);
             handler = null;
